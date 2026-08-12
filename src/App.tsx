@@ -12,6 +12,10 @@ import { TrustBar } from './components/TrustBar';
 import { Footer } from './components/Footer';
 import { PropertyRequestModal } from './components/PropertyRequestModal';
 import { ClientDashboardDrawer } from './components/ClientDashboardDrawer';
+import { AboutModal } from './components/AboutModal';
+import { LegalGuideModal } from './components/LegalGuideModal';
+import { ContactModal } from './components/ContactModal';
+import { FaqModal } from './components/FaqModal';
 import { ShieldCheck, FilterX, Search } from 'lucide-react';
 
 export default function App() {
@@ -56,6 +60,12 @@ export default function App() {
   const [isTitleCheckOpen, setIsTitleCheckOpen] = useState(false);
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+
+  // New Informational Pages / Modals state
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isLegalGuideOpen, setIsLegalGuideOpen] = useState(false);
+  const [isContactOpen, setIsContactOpen] = useState(false);
+  const [isFaqOpen, setIsFaqOpen] = useState(false);
 
   const listingsSectionRef = useRef<HTMLDivElement>(null);
 
@@ -153,6 +163,10 @@ export default function App() {
         onOpenTitleCheck={() => setIsTitleCheckOpen(true)}
         onOpenLeadModal={() => setIsLeadModalOpen(true)}
         onOpenDashboard={() => setIsDashboardOpen(true)}
+        onOpenAbout={() => setIsAboutOpen(true)}
+        onOpenLegalGuide={() => setIsLegalGuideOpen(true)}
+        onOpenContact={() => setIsContactOpen(true)}
+        onOpenFaq={() => setIsFaqOpen(true)}
         currency={currency}
         onToggleCurrency={(c) => setCurrency(c)}
         searchQuery={filterOptions.query}
@@ -252,10 +266,14 @@ export default function App() {
       {/* 5. Footer */}
       <Footer
         onOpenTitleCheck={() => setIsTitleCheckOpen(true)}
+        onOpenAbout={() => setIsAboutOpen(true)}
+        onOpenLegalGuide={() => setIsLegalGuideOpen(true)}
+        onOpenContact={() => setIsContactOpen(true)}
+        onOpenFaq={() => setIsFaqOpen(true)}
         onScrollToTop={scrollToTop}
       />
 
-      {/* --- OVERLAY MODALS & DRAWERS --- */}
+      {/* --- OVERLAY MODALS, DRAWERS & PAGES --- */}
 
       {/* Property Detail View Modal */}
       <PropertyDetailModal
@@ -304,6 +322,34 @@ export default function App() {
         isOpen={isDashboardOpen}
         onClose={() => setIsDashboardOpen(false)}
         currency={currency}
+      />
+
+      {/* About Us Page Modal */}
+      <AboutModal
+        isOpen={isAboutOpen}
+        onClose={() => setIsAboutOpen(false)}
+        onOpenTitleCheck={() => setIsTitleCheckOpen(true)}
+        onOpenLeadModal={() => setIsLeadModalOpen(true)}
+      />
+
+      {/* Title Verification & Legal Guide Modal */}
+      <LegalGuideModal
+        isOpen={isLegalGuideOpen}
+        onClose={() => setIsLegalGuideOpen(false)}
+        onOpenTitleCheck={() => setIsTitleCheckOpen(true)}
+      />
+
+      {/* Contact Us & Office Locations Modal */}
+      <ContactModal
+        isOpen={isContactOpen}
+        onClose={() => setIsContactOpen(false)}
+      />
+
+      {/* Buyer FAQs Modal */}
+      <FaqModal
+        isOpen={isFaqOpen}
+        onClose={() => setIsFaqOpen(false)}
+        onOpenTitleCheck={() => setIsTitleCheckOpen(true)}
       />
 
     </div>
