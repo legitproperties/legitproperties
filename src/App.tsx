@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Property, FilterOptions, CurrencyCode, PropertyRequestLead } from './types';
 import { INITIAL_PROPERTIES, CATEGORY_CAROUSELS } from './data/properties';
+import { fetchPropertiesFromSupabase, saveLeadToSupabase, isSupabaseConfigured } from './lib/supabase';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { PropertyCarousel } from './components/PropertyCarousel';
@@ -16,11 +17,22 @@ import { AboutModal } from './components/AboutModal';
 import { LegalGuideModal } from './components/LegalGuideModal';
 import { ContactModal } from './components/ContactModal';
 import { FaqModal } from './components/FaqModal';
-import { ShieldCheck, FilterX, Search } from 'lucide-react';
+import { ShieldCheck, FilterX, Search, Database } from 'lucide-react';
 
 export default function App() {
-  const [properties] = useState<Property[]>(INITIAL_PROPERTIES);
+  const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES);
   const [currency, setCurrency] = useState<CurrencyCode>('NGN');
+  
+  // Load properties from Supabase database if configured
+  useEffect(() => {
+    async function loadProperties() {
+      const data = await fetchPropertiesFromSupabase();
+      if (data && data.length > 0) {
+        setProperties(data);
+      }
+    }
+    loadProperties();
+  }, []);
   
   // Bookmarked Properties state
   const [savedIds, setSavedIds] = useState<string[]>(() => {
@@ -86,13 +98,8 @@ export default function App() {
   };
 
   // Lead submission logger
-  const handleLeadSubmit = (lead: PropertyRequestLead) => {
-    try {
-      const existing = JSON.parse(localStorage.getItem('legit_property_leads') || '[]');
-      localStorage.setItem('legit_property_leads', JSON.stringify([lead, ...existing]));
-    } catch (err) {
-      console.error('Lead storage error', err);
-    }
+  const handleLeadSubmit = async (lead: PropertyRequestLead) => {
+    await saveLeadToSupabase(lead);
   };
 
   // Filtered Properties Computation

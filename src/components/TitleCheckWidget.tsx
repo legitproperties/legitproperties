@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Search, CheckCircle2, AlertCircle, X, ArrowRight, MessageCircle } from 'lucide-react';
+import { saveTitleAuditToSupabase } from '../lib/supabase';
 
 interface TitleCheckWidgetProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ export const TitleCheckWidget: React.FC<TitleCheckWidgetProps> = ({ isOpen, onCl
     if (!refNumber.trim()) return;
 
     setSearchState('searching');
+    saveTitleAuditToSupabase(refNumber, 'Lagos/FCT', { action: 'title_search' });
+
     setTimeout(() => {
       setSearchState('found');
     }, 800);
