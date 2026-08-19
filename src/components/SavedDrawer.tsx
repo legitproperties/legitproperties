@@ -9,6 +9,7 @@ interface SavedDrawerProps {
   savedProperties: Property[];
   currency: CurrencyCode;
   onRemoveSaved: (id: string) => void;
+  onClearAll?: () => void;
   onSelectProperty: (property: Property) => void;
 }
 
@@ -18,13 +19,14 @@ export const SavedDrawer: React.FC<SavedDrawerProps> = ({
   savedProperties,
   currency,
   onRemoveSaved,
+  onClearAll,
   onSelectProperty,
 }) => {
   if (!isOpen) return null;
 
   const totalValueNgn = savedProperties.reduce((sum, p) => sum + p.priceNgn, 0);
 
-  const bulkWhatsappMessage = `Hello legitproperties.com.ng! I have saved ${savedProperties.length} verified properties on your website and would like a combined title verification report & site inspection schedule:\n\n` +
+  const bulkWhatsappMessage = `Hello legitproperties! I have saved ${savedProperties.length} verified properties on your website and would like a combined title verification report & site inspection schedule:\n\n` +
     savedProperties.map((p, idx) => `${idx + 1}. ${p.title} (${formatCompactPrice(p.priceNgn, currency)})`).join('\n') +
     `\n\nTotal Portfolio Value: ${formatCurrency(totalValueNgn, currency)}`;
 
@@ -41,12 +43,23 @@ export const SavedDrawer: React.FC<SavedDrawerProps> = ({
             <ShieldCheck className="w-5 h-5 text-emerald-400" />
             <h3 className="font-extrabold text-base tracking-tight">Saved Properties ({savedProperties.length})</h3>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {savedProperties.length > 0 && onClearAll && (
+              <button
+                onClick={onClearAll}
+                className="text-[11px] font-bold text-red-400 hover:text-red-300 px-2 py-1 rounded-md bg-slate-800/80 hover:bg-slate-800 transition-colors cursor-pointer"
+                title="Clear all saved properties"
+              >
+                Clear All
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Drawer Body */}

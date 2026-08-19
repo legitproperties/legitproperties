@@ -34,13 +34,22 @@ export default function App() {
     loadProperties();
   }, []);
   
-  // Bookmarked Properties state
+  // Bookmarked Properties state (Clean start, no pre-saved demo properties)
   const [savedIds, setSavedIds] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem('legit_saved_properties');
-      return stored ? JSON.parse(stored) : ['prop-land-1', 'prop-apt-1'];
+      if (!stored) return [];
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        // Purge legacy demo IDs
+        const cleaned = parsed.filter(
+          (id) => typeof id === 'string' && !id.startsWith('prop-land-') && !id.startsWith('prop-apt-') && !id.startsWith('prop-invest-') && !id.startsWith('prop-dup-') && !id.startsWith('prop-diaspora-') && !id.startsWith('prop-new-') && id !== 'prop-land-1' && id !== 'prop-apt-1'
+        );
+        return cleaned;
+      }
+      return [];
     } catch {
-      return ['prop-land-1', 'prop-apt-1'];
+      return [];
     }
   });
 
@@ -212,8 +221,46 @@ export default function App() {
           </div>
         )}
 
-        {/* If no properties match search filter */}
-        {filteredProperties.length === 0 ? (
+        {/* If no properties exist in database yet */}
+        {properties.length === 0 ? (
+          <div className="max-w-3xl mx-auto my-12 p-8 sm:p-12 bg-white rounded-3xl border border-slate-200 text-center space-y-5 shadow-xs">
+            <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto text-[#167A5A] border border-emerald-100">
+              <ShieldCheck className="w-8 h-8" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl sm:text-2xl font-extrabold text-[#102033]">
+                Live Verified Properties Coming Soon
+              </h3>
+              <p className="text-sm text-slate-500 max-w-lg mx-auto leading-relaxed">
+                All live listings added to your connected Supabase database will automatically display here with Certificate of Occupancy (C of O), Governor's Consent, and high-resolution media.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <button
+                onClick={() => setIsLeadModalOpen(true)}
+                className="px-5 py-3 bg-[#102033] hover:bg-[#167A5A] text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+              >
+                Submit Custom Property Request
+              </button>
+              <button
+                onClick={() => setIsTitleCheckOpen(true)}
+                className="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-[#102033] text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                Free Land Title Verification
+              </button>
+              <a
+                href="https://wa.me/2348030001122?text=Hello%20legitproperties!%20I%20am%20looking%20for%20a%20verified%20property%20in%20Nigeria."
+                target="_blank"
+                rel="noreferrer"
+                className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <span>Chat on WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        ) : filteredProperties.length === 0 ? (
+          /* If no properties match search filter */
           <div className="max-w-2xl mx-auto my-16 p-8 bg-white rounded-3xl border border-slate-200 text-center space-y-4">
             <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
               <ShieldCheck className="w-6 h-6" />
@@ -298,6 +345,7 @@ export default function App() {
         savedProperties={savedProperties}
         currency={currency}
         onRemoveSaved={handleToggleSave}
+        onClearAll={() => setSavedIds([])}
         onSelectProperty={(p) => setSelectedProperty(p)}
       />
 

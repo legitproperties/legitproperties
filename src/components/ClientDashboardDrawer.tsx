@@ -26,7 +26,7 @@ export const ClientDashboardDrawer: React.FC<ClientDashboardDrawerProps> = ({
     residenceCountry: 'United Kingdom',
     avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
     currentStep: 'Documentation',
-    activePropertyName: '600sqm Dry Land in Prime Lekki Phase 1 (Ref: prop-land-1)',
+    activePropertyName: 'Verified Allocation Portfolio',
     totalPaidNgn: 126000000,
     totalContractNgn: 420000000,
     nextPaymentDueDate: '15th September 2026',

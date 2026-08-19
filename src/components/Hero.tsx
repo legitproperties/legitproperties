@@ -36,7 +36,7 @@ export const Hero: React.FC<HeroProps> = ({
           </h1>
 
           <p className="text-base sm:text-lg text-slate-600 font-normal max-w-2xl mx-auto leading-relaxed">
-            Every property on <strong className="text-slate-900 font-semibold">legitproperties.com.ng</strong> is audited for valid Certificate of Occupancy (C of O) and Governor's Consent. Zero land disputes. Absolute peace of mind.
+            Every property on <strong className="text-slate-900 font-semibold">legitproperties</strong> is audited for valid Certificate of Occupancy (C of O) and Governor's Consent. Zero land disputes. Absolute peace of mind.
           </p>
         </div>
 
