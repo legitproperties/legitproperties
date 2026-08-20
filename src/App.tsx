@@ -2,6 +2,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Property, FilterOptions, CurrencyCode, PropertyRequestLead } from './types';
 import { INITIAL_PROPERTIES, CATEGORY_CAROUSELS } from './data/properties';
 import { fetchPropertiesFromSupabase, saveLeadToSupabase, isSupabaseConfigured } from './lib/supabase';
+import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
+import { AdminAuthPage } from './components/admin/AdminAuthPage';
+import { AdminDashboard } from './components/admin/AdminDashboard';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { PropertyCarousel } from './components/PropertyCarousel';
@@ -17,9 +20,67 @@ import { AboutModal } from './components/AboutModal';
 import { LegalGuideModal } from './components/LegalGuideModal';
 import { ContactModal } from './components/ContactModal';
 import { FaqModal } from './components/FaqModal';
-import { ShieldCheck, FilterX, Search, Database } from 'lucide-react';
+import { ShieldCheck, FilterX, Search, Database, Lock, Loader2 } from 'lucide-react';
 
-export default function App() {
+/**
+ * Protected Admin Route Container
+ * Enforces authentication guards: unauthenticated users are presented with the Sign In/Sign Up portal,
+ * while authenticated admins access the full interactive CMS dashboard.
+ */
+function AdminRouteView({ onNavigate }: { onNavigate: (path: string) => void }) {
+  const { admin, isLoading } = useAdminAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white space-y-4 font-sans">
+        <div className="w-16 h-16 rounded-2xl bg-[#167A5A] flex items-center justify-center shadow-lg shadow-emerald-950/50">
+          <ShieldCheck className="w-8 h-8 text-white" />
+        </div>
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-300">
+          <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
+          <span>Verifying Admin Authorization...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!admin) {
+    return (
+      <AdminAuthPage
+        onSuccess={() => onNavigate('/admin/dashboard')}
+        onGoBack={() => onNavigate('/')}
+      />
+    );
+  }
+
+  return (
+    <AdminDashboard
+      onGoToPublicSite={() => onNavigate('/')}
+    />
+  );
+}
+
+function MainApp() {
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    return typeof window !== 'undefined' ? window.location.pathname : '/';
+  });
+
+  const navigateTo = (path: string) => {
+    setCurrentPath(path);
+    if (typeof window !== 'undefined') {
+      window.history.pushState(null, '', path);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES);
   const [currency, setCurrency] = useState<CurrencyCode>('NGN');
   
@@ -82,7 +143,7 @@ export default function App() {
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
 
-  // New Informational Pages / Modals state
+  // Informational Pages / Modals state
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isLegalGuideOpen, setIsLegalGuideOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
@@ -120,23 +181,30 @@ export default function App() {
       if (filterOptions.category !== 'all' && p.category !== filterOptions.category) return false;
       // City filter
       if (filterOptions.city !== 'all' && p.location.city !== filterOptions.city) return false;
+      // Price filter
+      if (p.priceNgn < filterOptions.minPrice || p.priceNgn > filterOptions.maxPrice) return false;
       // Title Status filter
-      if (
-        filterOptions.titleStatus !== 'all' &&
-        !p.titleStatus.toLowerCase().includes(filterOptions.titleStatus.toLowerCase())
-      ) {
-        return false;
+      if (filterOptions.titleStatus !== 'all' && p.titleStatus !== filterOptions.titleStatus) return false;
+      // Purpose filter
+      if (filterOptions.purpose !== 'all' && p.purpose !== filterOptions.purpose) return false;
+      
+      // Bedrooms filter
+      if (filterOptions.bedrooms !== 'all') {
+        const reqBeds = parseInt(filterOptions.bedrooms, 10);
+        if (!p.bedrooms || p.bedrooms < reqBeds) return false;
       }
-      // Max price filter
-      if (filterOptions.maxPrice && p.priceNgn > filterOptions.maxPrice) return false;
-      // Search query filter
-      if (filterOptions.query.trim() !== '') {
+
+      // Query search
+      if (filterOptions.query.trim()) {
         const q = filterOptions.query.toLowerCase();
         const matchTitle = p.title.toLowerCase().includes(q);
-        const matchLoc = `${p.location.neighborhood} ${p.location.city} ${p.location.address}`.toLowerCase().includes(q);
-        const matchTitleType = p.titleStatus.toLowerCase().includes(q);
-        if (!matchTitle && !matchLoc && !matchTitleType) return false;
+        const matchCity = p.location.city.toLowerCase().includes(q);
+        const matchNeigh = p.location.neighborhood.toLowerCase().includes(q);
+        const matchTitleDoc = p.titleStatus.toLowerCase().includes(q);
+        const matchDeveloper = p.developerInfo.name.toLowerCase().includes(q);
+        if (!matchTitle && !matchCity && !matchNeigh && !matchTitleDoc && !matchDeveloper) return false;
       }
+
       return true;
     });
   }, [properties, filterOptions]);
@@ -145,14 +213,6 @@ export default function App() {
   const savedProperties = useMemo(() => {
     return properties.filter((p) => savedIds.includes(p.id));
   }, [properties, savedIds]);
-
-  // Check if filters are active
-  const isFilterActive =
-    filterOptions.type !== 'all' ||
-    filterOptions.city !== 'all' ||
-    filterOptions.titleStatus !== 'all' ||
-    filterOptions.maxPrice < 2000000000 ||
-    filterOptions.query.trim() !== '';
 
   const handleResetFilters = () => {
     setFilterOptions({
@@ -168,10 +228,26 @@ export default function App() {
     });
   };
 
+  const isFilterActive =
+    filterOptions.type !== 'all' ||
+    filterOptions.category !== 'all' ||
+    filterOptions.city !== 'all' ||
+    filterOptions.minPrice > 0 ||
+    filterOptions.maxPrice < 2000000000 ||
+    filterOptions.titleStatus !== 'all' ||
+    filterOptions.purpose !== 'all' ||
+    filterOptions.bedrooms !== 'all' ||
+    filterOptions.query.trim() !== '';
+
+  // Render Admin View if on admin route
+  if (currentPath.startsWith('/admin')) {
+    return <AdminRouteView onNavigate={navigateTo} />;
+  }
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-[#102033] selection:bg-[#167A5A] selection:text-white">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 selection:bg-[#167A5A] selection:text-white">
       
-      {/* 1. Navigation Header */}
+      {/* 1. Header & Navigation */}
       <Navbar
         savedCount={savedIds.length}
         onOpenSaved={() => setIsSavedDrawerOpen(true)}
@@ -183,21 +259,22 @@ export default function App() {
         onOpenLegalGuide={() => setIsLegalGuideOpen(true)}
         onOpenContact={() => setIsContactOpen(true)}
         onOpenFaq={() => setIsFaqOpen(true)}
+        onOpenAdmin={() => navigateTo('/admin')}
         currency={currency}
-        onToggleCurrency={(c) => setCurrency(c)}
+        onToggleCurrency={(code) => setCurrency(code)}
         searchQuery={filterOptions.query}
         onSearchChange={(q) => setFilterOptions((prev) => ({ ...prev, query: q }))}
       />
 
-      {/* 2. Hero Section */}
+      {/* 2. Hero Component */}
       <Hero
         filterOptions={filterOptions}
         onFilterChange={(updated) => setFilterOptions((prev) => ({ ...prev, ...updated }))}
         onScrollToListings={scrollToProperties}
-        totalPropertiesCount={properties.length}
+        totalPropertiesCount={filteredProperties.length}
       />
 
-      {/* 3. IMMEDIATELY FOLLOWED BY NEAT AND PLENTY CAROUSELS OF LISTED PROPERTIES */}
+      {/* 3. Listed Properties Section */}
       <main ref={listingsSectionRef} className="flex-1 space-y-2 py-4">
         
         {/* Active Filter Bar Banner if filters are applied */}
@@ -249,14 +326,13 @@ export default function App() {
               >
                 Free Land Title Verification
               </button>
-              <a
-                href="https://wa.me/2348030001122?text=Hello%20legitproperties!%20I%20am%20looking%20for%20a%20verified%20property%20in%20Nigeria."
-                target="_blank"
-                rel="noreferrer"
-                className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              <button
+                onClick={() => navigateTo('/admin')}
+                className="px-5 py-3 bg-[#167A5A] hover:bg-[#126248] text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
               >
-                <span>Chat on WhatsApp</span>
-              </a>
+                <Lock className="w-3.5 h-3.5" />
+                <span>Admin: Add Live Property</span>
+              </button>
             </div>
           </div>
         ) : filteredProperties.length === 0 ? (
@@ -283,7 +359,6 @@ export default function App() {
               (p) => p.category === carousel.key
             );
 
-            // If user filtered by type (e.g. land only), show matching properties across carousels
             const displayProperties = categoryProperties.length > 0
               ? categoryProperties
               : filteredProperties.slice(0, 4);
@@ -324,18 +399,28 @@ export default function App() {
         onOpenLegalGuide={() => setIsLegalGuideOpen(true)}
         onOpenContact={() => setIsContactOpen(true)}
         onOpenFaq={() => setIsFaqOpen(true)}
+        onOpenAdmin={() => navigateTo('/admin')}
         onScrollToTop={scrollToTop}
       />
 
-      {/* --- OVERLAY MODALS, DRAWERS & PAGES --- */}
+      {/* 6. Modals & Slide-out Drawers */}
 
-      {/* Property Detail View Modal */}
+      {/* Property Details Modal */}
       <PropertyDetailModal
         property={selectedProperty}
+        isOpen={Boolean(selectedProperty)}
+        onClose={() => setSelectedProperty(null)}
         currency={currency}
         isSaved={selectedProperty ? savedIds.includes(selectedProperty.id) : false}
-        onClose={() => setSelectedProperty(null)}
         onToggleSave={handleToggleSave}
+        onOpenTitleCheck={() => {
+          setSelectedProperty(null);
+          setIsTitleCheckOpen(true);
+        }}
+        onOpenLeadModal={() => {
+          setSelectedProperty(null);
+          setIsLeadModalOpen(true);
+        }}
       />
 
       {/* Bookmarked Properties Drawer */}
@@ -408,5 +493,13 @@ export default function App() {
       />
 
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AdminAuthProvider>
+      <MainApp />
+    </AdminAuthProvider>
   );
 }

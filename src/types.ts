@@ -113,3 +113,26 @@ export interface PaymentRecord {
   status: 'Completed' | 'Pending' | 'Upcoming';
   receiptUrl?: string;
 }
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'superadmin' | 'editor';
+  created_at?: string;
+}
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  category: string;
+  author: string;
+  coverImage?: string;
+  published: boolean;
+  viewsCount?: number;
+  createdAt: string;
+}
+

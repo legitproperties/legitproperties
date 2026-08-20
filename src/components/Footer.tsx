@@ -7,6 +7,7 @@ interface FooterProps {
   onOpenLegalGuide: () => void;
   onOpenContact: () => void;
   onOpenFaq: () => void;
+  onOpenAdmin?: () => void;
   onScrollToTop: () => void;
 }
 
@@ -16,6 +17,7 @@ export const Footer: React.FC<FooterProps> = ({
   onOpenLegalGuide,
   onOpenContact,
   onOpenFaq,
+  onOpenAdmin,
   onScrollToTop,
 }) => {
   return (
@@ -98,6 +100,14 @@ export const Footer: React.FC<FooterProps> = ({
                   <span>Buyer Frequently Asked Questions</span>
                 </button>
               </li>
+              {onOpenAdmin && (
+                <li>
+                  <button onClick={onOpenAdmin} className="hover:text-emerald-400 transition-colors flex items-center gap-1.5 cursor-pointer text-slate-300 font-semibold">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Admin Dashboard & CMS</span>
+                  </button>
+                </li>
+              )}
             </ul>
           </div>
 
