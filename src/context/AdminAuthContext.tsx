@@ -16,17 +16,25 @@ interface AdminAuthContextType {
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
 export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [admin, setAdmin] = useState<AdminUser | null>(null);
+  const [admin, setAdmin] = useState<AdminUser | null>(() => {
+    try {
+      const stored = localStorage.getItem('legit_admin_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
   const [session, setSession] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const refreshProfile = async () => {
     try {
       const userProfile = await getCurrentAdminUser();
-      setAdmin(userProfile);
+      if (userProfile) {
+        setAdmin(userProfile);
+      }
     } catch (err) {
       console.error('Failed to load admin profile', err);
-      setAdmin(null);
     }
   };
 
@@ -34,10 +42,10 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     let isMounted = true;
 
     async function initializeAuth() {
-      setIsLoading(true);
-
       if (!supabase) {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
         return;
       }
 
@@ -45,11 +53,14 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         if (isMounted) {
           setSession(initialSession);
-          if (initialSession) {
-            const profile = await getCurrentAdminUser();
+          if (initialSession?.user) {
+            const profile = await getCurrentAdminUser(initialSession.user);
             setAdmin(profile);
           } else {
-            setAdmin(null);
+            const stored = localStorage.getItem('legit_admin_user');
+            if (!stored) {
+              setAdmin(null);
+            }
           }
         }
       } catch (e) {
@@ -65,14 +76,17 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     // Listen to Supabase Auth State Changes
     if (supabase) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
         if (!isMounted) return;
         setSession(newSession);
         if (newSession?.user) {
-          const profile = await getCurrentAdminUser();
+          const profile = await getCurrentAdminUser(newSession.user);
           setAdmin(profile);
-        } else {
+        } else if (event === 'SIGNED_OUT') {
           setAdmin(null);
+          try {
+            localStorage.removeItem('legit_admin_user');
+          } catch {}
         }
         setIsLoading(false);
       });
@@ -88,15 +102,17 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const handleSignIn = async (email: string, password: string) => {
     setIsLoading(true);
-    const { session: newSession, error } = await adminSignIn(email, password);
-    if (error || !newSession) {
+    const { session: newSession, user, error } = await adminSignIn(email, password);
+    if (error || (!newSession && !user)) {
       setIsLoading(false);
       return { success: false, error: error || 'Authentication failed' };
     }
 
     setSession(newSession);
-    const profile = await getCurrentAdminUser();
-    setAdmin(profile);
+    const profile = await getCurrentAdminUser(user || newSession?.user);
+    if (profile) {
+      setAdmin(profile);
+    }
     setIsLoading(false);
     return { success: true, error: null };
   };
@@ -109,8 +125,7 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return { success: false, error: error || 'Registration failed' };
     }
 
-    // Auto sign in or load profile
-    const profile = await getCurrentAdminUser();
+    const profile = await getCurrentAdminUser(user);
     if (profile) {
       setAdmin(profile);
     }
@@ -123,6 +138,9 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     await adminSignOut();
     setAdmin(null);
     setSession(null);
+    try {
+      localStorage.removeItem('legit_admin_user');
+    } catch {}
     setIsLoading(false);
   };
 

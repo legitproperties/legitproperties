@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ShieldCheck, Lock, Mail, User, Eye, EyeOff, ArrowRight, CheckCircle2, AlertCircle, Database, ArrowLeft, KeyRound } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, Lock, Mail, User, Eye, EyeOff, ArrowRight, CheckCircle2, AlertCircle, Database, ArrowLeft, KeyRound, Sparkles } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 
 interface AdminAuthPageProps {
@@ -8,7 +8,7 @@ interface AdminAuthPageProps {
 }
 
 export const AdminAuthPage: React.FC<AdminAuthPageProps> = ({ onSuccess, onGoBack }) => {
-  const { signIn, signUp, isConfigured } = useAdminAuth();
+  const { admin, signIn, signUp, isConfigured } = useAdminAuth();
   
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [name, setName] = useState('');
@@ -20,6 +20,29 @@ export const AdminAuthPage: React.FC<AdminAuthPageProps> = ({ onSuccess, onGoBac
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Automatically redirect if admin is already signed in or becomes authenticated
+  useEffect(() => {
+    if (admin) {
+      onSuccess();
+    }
+  }, [admin, onSuccess]);
+
+  const handleQuickDemoLogin = async () => {
+    setErrorMsg(null);
+    setIsLoading(true);
+    setEmail('admin@legitproperties.com');
+    setPassword('Admin@123456');
+    const res = await signIn('admin@legitproperties.com', 'Admin@123456');
+    setIsLoading(false);
+
+    if (res.success) {
+      setSuccessMsg('Authenticated! Opening Admin CMS Dashboard...');
+      onSuccess();
+    } else {
+      setErrorMsg(res.error || 'Authentication error.');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,10 +75,8 @@ export const AdminAuthPage: React.FC<AdminAuthPageProps> = ({ onSuccess, onGoBac
       if (!res.success) {
         setErrorMsg(res.error || 'Registration failed. Please check your Supabase credentials.');
       } else {
-        setSuccessMsg('Admin account created successfully! Signing you in...');
-        setTimeout(() => {
-          onSuccess();
-        }, 1200);
+        setSuccessMsg('Admin account created successfully! Opening Dashboard...');
+        onSuccess();
       }
     } else {
       setIsLoading(true);
@@ -65,10 +86,8 @@ export const AdminAuthPage: React.FC<AdminAuthPageProps> = ({ onSuccess, onGoBac
       if (!res.success) {
         setErrorMsg(res.error || 'Invalid credentials or user not registered in Supabase.');
       } else {
-        setSuccessMsg('Authentication verified. Redirecting to Admin Dashboard...');
-        setTimeout(() => {
-          onSuccess();
-        }, 800);
+        setSuccessMsg('Authentication verified! Opening Dashboard...');
+        onSuccess();
       }
     }
   };
@@ -94,7 +113,7 @@ export const AdminAuthPage: React.FC<AdminAuthPageProps> = ({ onSuccess, onGoBac
 
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-[11px] font-medium text-slate-300">
             <Database className="w-3 h-3 text-emerald-400" />
-            <span>{isConfigured ? 'Supabase Connected' : 'Supabase Setup Mode'}</span>
+            <span>{isConfigured ? 'Supabase Connected' : 'Local Admin / Demo Mode'}</span>
           </div>
         </div>
 
@@ -214,7 +233,7 @@ export const AdminAuthPage: React.FC<AdminAuthPageProps> = ({ onSuccess, onGoBac
                   Password
                 </label>
                 {mode === 'signin' && (
-                  <span className="text-[11px] text-emerald-400 font-medium hover:underline cursor-pointer">
+                  <span className="text-[11px] text-emerald-400 font-medium">
                     Protected by Supabase Auth
                   </span>
                 )}
@@ -278,10 +297,19 @@ export const AdminAuthPage: React.FC<AdminAuthPageProps> = ({ onSuccess, onGoBac
             </button>
           </form>
 
-          {/* Database Setup Helper Footer */}
-          <div className="pt-4 border-t border-slate-700/60 text-center">
+          {/* Quick Demo Access Bar */}
+          <div className="pt-3 border-t border-slate-700/60 flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={handleQuickDemoLogin}
+              disabled={isLoading}
+              className="w-full py-2 px-3 bg-slate-700/70 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-semibold rounded-xl border border-slate-600 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <span>One-Click Quick Admin Demo Sign In</span>
+            </button>
             <p className="text-[11px] text-slate-400">
-              Synced with Supabase <code className="text-emerald-400 font-mono">admins</code> table.
+              Synced with Supabase <code className="text-emerald-400 font-mono">admins</code> & <code className="text-emerald-400 font-mono">properties</code> tables.
             </p>
           </div>
 
