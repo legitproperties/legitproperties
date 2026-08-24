@@ -60,25 +60,50 @@ function AdminRouteView({ onNavigate }: { onNavigate: (path: string) => void }) 
   );
 }
 
+function getActiveAppRoute(): string {
+  if (typeof window === 'undefined') return '/';
+  const pathname = window.location.pathname;
+  const hash = window.location.hash;
+  const search = window.location.search;
+
+  if (
+    pathname.startsWith('/admin') ||
+    hash.startsWith('#admin') ||
+    hash.startsWith('#/admin') ||
+    search.includes('page=admin') ||
+    search.includes('admin=true') ||
+    search.includes('admin=1')
+  ) {
+    return '/admin';
+  }
+  return pathname;
+}
+
 function MainApp() {
-  const [currentPath, setCurrentPath] = useState<string>(() => {
-    return typeof window !== 'undefined' ? window.location.pathname : '/';
-  });
+  const [currentPath, setCurrentPath] = useState<string>(() => getActiveAppRoute());
 
   const navigateTo = (path: string) => {
     setCurrentPath(path);
     if (typeof window !== 'undefined') {
-      window.history.pushState(null, '', path);
+      if (path.startsWith('/admin')) {
+        window.history.pushState(null, '', '#/admin');
+      } else {
+        window.history.pushState(null, '', path);
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   useEffect(() => {
-    const handlePopState = () => {
-      setCurrentPath(window.location.pathname);
+    const handleLocationChange = () => {
+      setCurrentPath(getActiveAppRoute());
     };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
   }, []);
 
   const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES);
@@ -259,6 +284,7 @@ function MainApp() {
         onOpenLegalGuide={() => setIsLegalGuideOpen(true)}
         onOpenContact={() => setIsContactOpen(true)}
         onOpenFaq={() => setIsFaqOpen(true)}
+        onOpenAdmin={() => navigateTo('/admin')}
         currency={currency}
         onToggleCurrency={(code) => setCurrency(code)}
         searchQuery={filterOptions.query}
@@ -391,6 +417,7 @@ function MainApp() {
         onOpenLegalGuide={() => setIsLegalGuideOpen(true)}
         onOpenContact={() => setIsContactOpen(true)}
         onOpenFaq={() => setIsFaqOpen(true)}
+        onOpenAdmin={() => navigateTo('/admin')}
         onScrollToTop={scrollToTop}
       />
 
