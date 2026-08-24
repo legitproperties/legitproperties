@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Search, Bookmark, SlidersHorizontal, Check, User, Sparkles, Info, BookOpen, Phone, HelpCircle, Lock } from 'lucide-react';
+import { ShieldCheck, Search, Bookmark, SlidersHorizontal, Check, User, Sparkles, Info, BookOpen, Phone, HelpCircle } from 'lucide-react';
 import { CurrencyCode } from '../types';
 
 interface NavbarProps {
@@ -13,7 +13,6 @@ interface NavbarProps {
   onOpenLegalGuide: () => void;
   onOpenContact: () => void;
   onOpenFaq: () => void;
-  onOpenAdmin: () => void;
   currency: CurrencyCode;
   onToggleCurrency: (code: CurrencyCode) => void;
   searchQuery: string;
@@ -31,7 +30,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenLegalGuide,
   onOpenContact,
   onOpenFaq,
-  onOpenAdmin,
   currency,
   onToggleCurrency,
   searchQuery,
@@ -59,13 +57,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button onClick={onOpenContact} className="hover:text-emerald-400 transition-colors flex items-center gap-1 cursor-pointer">
               <Phone className="w-3 h-3 text-emerald-400" />
               <span>Contact & Offices</span>
-            </button>
-            <button
-              onClick={onOpenAdmin}
-              className="text-emerald-400 hover:text-emerald-300 font-bold transition-colors flex items-center gap-1 cursor-pointer bg-slate-800/90 px-2 py-0.5 rounded border border-emerald-500/40"
-            >
-              <Lock className="w-3 h-3 text-emerald-400" />
-              <span>Admin / CMS (/admin)</span>
             </button>
           </div>
 
@@ -187,20 +178,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Client Portal / Vault Dashboard */}
             <button
               onClick={onOpenDashboard}
-              className="hidden xl:flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[#102033] text-xs font-semibold transition-all cursor-pointer"
+              className="hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[#102033] text-xs font-semibold transition-all cursor-pointer"
             >
               <User className="w-4 h-4 text-[#167A5A]" />
               <span>Client Vault</span>
-            </button>
-
-            {/* Admin Portal Button */}
-            <button
-              onClick={onOpenAdmin}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-800 bg-[#102033] hover:bg-[#167A5A] text-emerald-400 hover:text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-              title="Open Admin CMS Dashboard"
-            >
-              <Lock className="w-3.5 h-3.5" />
-              <span>/admin</span>
             </button>
 
             {/* Request Specific Land / Property Lead Modal Trigger */}
@@ -233,11 +214,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button onClick={onOpenAbout} className="hover:text-[#167A5A] whitespace-nowrap">About Us</button>
             <button onClick={onOpenLegalGuide} className="hover:text-[#167A5A] whitespace-nowrap">Title Guide</button>
             <button onClick={onOpenFaq} className="hover:text-[#167A5A] whitespace-nowrap">FAQs</button>
-            <button onClick={onOpenContact} className="hover:text-[#167A5A] whitespace-nowrap">Contact</button>
-            <button onClick={onOpenAdmin} className="text-emerald-600 font-extrabold hover:text-emerald-700 whitespace-nowrap flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
-              <Lock className="w-3 h-3" />
-              <span>/admin</span>
-            </button>
+            <button onClick={onOpenContact} className="hover:text-[#167A5A] whitespace-nowrap">Contact Us</button>
           </div>
         </div>
 

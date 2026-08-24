@@ -284,7 +284,6 @@ function MainApp() {
         onOpenLegalGuide={() => setIsLegalGuideOpen(true)}
         onOpenContact={() => setIsContactOpen(true)}
         onOpenFaq={() => setIsFaqOpen(true)}
-        onOpenAdmin={() => navigateTo('/admin')}
         currency={currency}
         onToggleCurrency={(code) => setCurrency(code)}
         searchQuery={filterOptions.query}
@@ -417,7 +416,6 @@ function MainApp() {
         onOpenLegalGuide={() => setIsLegalGuideOpen(true)}
         onOpenContact={() => setIsContactOpen(true)}
         onOpenFaq={() => setIsFaqOpen(true)}
-        onOpenAdmin={() => navigateTo('/admin')}
         onScrollToTop={scrollToTop}
       />
 
