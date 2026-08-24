@@ -259,7 +259,6 @@ function MainApp() {
         onOpenLegalGuide={() => setIsLegalGuideOpen(true)}
         onOpenContact={() => setIsContactOpen(true)}
         onOpenFaq={() => setIsFaqOpen(true)}
-        onOpenAdmin={() => navigateTo('/admin')}
         currency={currency}
         onToggleCurrency={(code) => setCurrency(code)}
         searchQuery={filterOptions.query}
@@ -325,13 +324,6 @@ function MainApp() {
                 className="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-[#102033] text-xs font-bold rounded-xl transition-all cursor-pointer"
               >
                 Free Land Title Verification
-              </button>
-              <button
-                onClick={() => navigateTo('/admin')}
-                className="px-5 py-3 bg-[#167A5A] hover:bg-[#126248] text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
-              >
-                <Lock className="w-3.5 h-3.5" />
-                <span>Admin: Add Live Property</span>
               </button>
             </div>
           </div>
@@ -399,7 +391,6 @@ function MainApp() {
         onOpenLegalGuide={() => setIsLegalGuideOpen(true)}
         onOpenContact={() => setIsContactOpen(true)}
         onOpenFaq={() => setIsFaqOpen(true)}
-        onOpenAdmin={() => navigateTo('/admin')}
         onScrollToTop={scrollToTop}
       />
 

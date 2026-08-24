@@ -13,7 +13,6 @@ interface NavbarProps {
   onOpenLegalGuide: () => void;
   onOpenContact: () => void;
   onOpenFaq: () => void;
-  onOpenAdmin?: () => void;
   currency: CurrencyCode;
   onToggleCurrency: (code: CurrencyCode) => void;
   searchQuery: string;
@@ -31,7 +30,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenLegalGuide,
   onOpenContact,
   onOpenFaq,
-  onOpenAdmin,
   currency,
   onToggleCurrency,
   searchQuery,
@@ -63,15 +61,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            {onOpenAdmin && (
-              <button
-                onClick={onOpenAdmin}
-                className="text-slate-300 hover:text-emerald-400 font-semibold transition-colors flex items-center gap-1 cursor-pointer bg-slate-800/80 px-2.5 py-0.5 rounded-lg border border-slate-700"
-              >
-                <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                <span>Admin CMS</span>
-              </button>
-            )}
             <span className="text-slate-400">Direct Registry Advisory: <strong className="text-white">+234 803 000 1122</strong></span>
             <span className="text-emerald-400 font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/80">
               CAC Registered Real Estate
