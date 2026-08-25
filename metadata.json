@@ -1,5 +1,6 @@
-{  "name": "legitproperties",
-  "description": "Minimalist and trusted real estate platform for verified lands and luxury apartments across Nigeria.",
+{
+  "name": "legitproperties",
+  "description": "Minimalist and trusted real estate platform for verified lands, houses and luxury apartments across Nigeria.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

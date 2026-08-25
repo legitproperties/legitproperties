@@ -32,7 +32,7 @@ export const Hero: React.FC<HeroProps> = ({
           </div>
 
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-[1.15]">
-            Verified Lands & Luxury Apartments in Nigeria.
+            Verified Lands, Houses and Luxury Apartments in Nigeria.
           </h1>
 
           <p className="text-base sm:text-lg text-slate-600 font-normal max-w-2xl mx-auto leading-relaxed">
