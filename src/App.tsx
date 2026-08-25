@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Property, FilterOptions, CurrencyCode, PropertyRequestLead } from './types';
 import { INITIAL_PROPERTIES, CATEGORY_CAROUSELS } from './data/properties';
-import { fetchPropertiesFromSupabase, saveLeadToSupabase, isSupabaseConfigured } from './lib/supabase';
+import { fetchPropertiesFromSupabase, saveLeadToSupabase } from './lib/supabase';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
 import { AdminAuthPage } from './components/admin/AdminAuthPage';
 import { AdminDashboard } from './components/admin/AdminDashboard';
@@ -20,7 +20,7 @@ import { AboutModal } from './components/AboutModal';
 import { LegalGuideModal } from './components/LegalGuideModal';
 import { ContactModal } from './components/ContactModal';
 import { FaqModal } from './components/FaqModal';
-import { ShieldCheck, FilterX, Search, Database, Lock, Loader2 } from 'lucide-react';
+import { ShieldCheck, FilterX, Search, Loader2 } from 'lucide-react';
 
 /**
  * Protected Admin Route Container
@@ -33,7 +33,7 @@ function AdminRouteView({ onNavigate }: { onNavigate: (path: string) => void }) 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white space-y-4 font-sans">
-        <div className="w-16 h-16 rounded-2xl bg-[#167A5A] flex items-center justify-center shadow-lg shadow-emerald-950/50">
+        <div className="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center shadow-lg border border-slate-700">
           <ShieldCheck className="w-8 h-8 text-white" />
         </div>
         <div className="flex items-center gap-2 text-sm font-semibold text-slate-300">
@@ -120,18 +120,14 @@ function MainApp() {
     loadProperties();
   }, []);
   
-  // Bookmarked Properties state (Clean start, no pre-saved demo properties)
+  // Bookmarked Properties state
   const [savedIds, setSavedIds] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem('legit_saved_properties');
       if (!stored) return [];
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) {
-        // Purge legacy demo IDs
-        const cleaned = parsed.filter(
-          (id) => typeof id === 'string' && !id.startsWith('prop-land-') && !id.startsWith('prop-apt-') && !id.startsWith('prop-invest-') && !id.startsWith('prop-dup-') && !id.startsWith('prop-diaspora-') && !id.startsWith('prop-new-') && id !== 'prop-land-1' && id !== 'prop-apt-1'
-        );
-        return cleaned;
+        return parsed.filter((id) => typeof id === 'string');
       }
       return [];
     } catch {
@@ -270,7 +266,7 @@ function MainApp() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 selection:bg-[#167A5A] selection:text-white">
+    <div className="min-h-screen bg-white flex flex-col font-sans text-slate-900 selection:bg-slate-900 selection:text-white">
       
       {/* 1. Header & Navigation */}
       <Navbar
@@ -299,21 +295,21 @@ function MainApp() {
       />
 
       {/* 3. Listed Properties Section */}
-      <main ref={listingsSectionRef} className="flex-1 space-y-2 py-4">
+      <main ref={listingsSectionRef} className="flex-1 space-y-2 py-4 bg-white">
         
         {/* Active Filter Bar Banner if filters are applied */}
         {isFilterActive && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2">
-            <div className="p-3.5 bg-[#102033] text-white rounded-2xl flex items-center justify-between gap-3 text-xs shadow-xs">
+            <div className="p-4 bg-slate-50 border border-slate-200 text-slate-900 rounded-2xl flex items-center justify-between gap-3 text-xs shadow-xs">
               <div className="flex items-center gap-2">
-                <Search className="w-4 h-4 text-emerald-400" />
+                <Search className="w-4 h-4 text-slate-500" />
                 <span>
-                  Showing <strong>{filteredProperties.length}</strong> verified properties matching your active search
+                  Showing <strong className="text-slate-900 font-extrabold">{filteredProperties.length}</strong> verified properties matching your active search
                 </span>
               </div>
               <button
                 onClick={handleResetFilters}
-                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                className="px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
               >
                 <FilterX className="w-3.5 h-3.5" />
                 <span>Clear Filters</span>
@@ -324,15 +320,15 @@ function MainApp() {
 
         {/* If no properties exist in database yet */}
         {properties.length === 0 ? (
-          <div className="max-w-3xl mx-auto my-12 p-8 sm:p-12 bg-white rounded-3xl border border-slate-200 text-center space-y-5 shadow-xs">
-            <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto text-[#167A5A] border border-emerald-100">
-              <ShieldCheck className="w-8 h-8" />
+          <div className="max-w-3xl mx-auto my-12 p-8 sm:p-12 bg-slate-50 rounded-3xl border border-slate-200 text-center space-y-5 shadow-sm">
+            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto text-slate-800 border border-slate-200 shadow-xs">
+              <ShieldCheck className="w-8 h-8 text-emerald-600" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-xl sm:text-2xl font-extrabold text-[#102033]">
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900">
                 Live Verified Properties Coming Soon
               </h3>
-              <p className="text-sm text-slate-500 max-w-lg mx-auto leading-relaxed">
+              <p className="text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
                 All live listings added to your connected Supabase database will automatically display here with Certificate of Occupancy (C of O), Governor's Consent, and high-resolution media.
               </p>
             </div>
@@ -340,13 +336,13 @@ function MainApp() {
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <button
                 onClick={() => setIsLeadModalOpen(true)}
-                className="px-5 py-3 bg-[#102033] hover:bg-[#167A5A] text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+                className="px-5 py-3 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
               >
                 Submit Custom Property Request
               </button>
               <button
                 onClick={() => setIsTitleCheckOpen(true)}
-                className="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-[#102033] text-xs font-bold rounded-xl transition-all cursor-pointer"
+                className="px-5 py-3 bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs"
               >
                 Free Land Title Verification
               </button>
@@ -354,23 +350,23 @@ function MainApp() {
           </div>
         ) : filteredProperties.length === 0 ? (
           /* If no properties match search filter */
-          <div className="max-w-2xl mx-auto my-16 p-8 bg-white rounded-3xl border border-slate-200 text-center space-y-4">
-            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
-              <ShieldCheck className="w-6 h-6" />
+          <div className="max-w-2xl mx-auto my-16 p-8 bg-slate-50 rounded-3xl border border-slate-200 text-center space-y-4 shadow-sm">
+            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto text-slate-700 border border-slate-200 shadow-xs">
+              <ShieldCheck className="w-6 h-6 text-emerald-600" />
             </div>
-            <h3 className="text-lg font-bold text-[#102033]">No properties matched your search criteria</h3>
-            <p className="text-xs text-slate-500 max-w-md mx-auto">
+            <h3 className="text-lg font-black text-slate-900">No properties matched your search criteria</h3>
+            <p className="text-xs text-slate-600 max-w-md mx-auto">
               Try adjusting your price filter or title status selection to view available land and apartment listings across Lagos, Abuja, and Port Harcourt.
             </p>
             <button
               onClick={handleResetFilters}
-              className="px-5 py-2.5 bg-[#102033] hover:bg-[#167A5A] text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+              className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
             >
               Reset Search & Show All Properties
             </button>
           </div>
         ) : (
-          /* Render carousels for each category! */
+          /* Render carousels for each category */
           CATEGORY_CAROUSELS.map((carousel) => {
             const categoryProperties = filteredProperties.filter(
               (p) => p.category === carousel.key
@@ -429,14 +425,6 @@ function MainApp() {
         currency={currency}
         isSaved={selectedProperty ? savedIds.includes(selectedProperty.id) : false}
         onToggleSave={handleToggleSave}
-        onOpenTitleCheck={() => {
-          setSelectedProperty(null);
-          setIsTitleCheckOpen(true);
-        }}
-        onOpenLeadModal={() => {
-          setSelectedProperty(null);
-          setIsLeadModalOpen(true);
-        }}
       />
 
       {/* Bookmarked Properties Drawer */}

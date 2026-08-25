@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Lock, UserCheck, CalendarDays, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Lock, UserCheck, CalendarDays, ArrowRight, FileCheck2, Scale } from 'lucide-react';
 
 interface TrustBarProps {
   onOpenTitleCheck: () => void;
@@ -7,72 +7,104 @@ interface TrustBarProps {
 
 export const TrustBar: React.FC<TrustBarProps> = ({ onOpenTitleCheck }) => {
   return (
-    <section className="py-12 bg-slate-900 text-white border-t border-b border-slate-800 my-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-16 bg-slate-50 text-slate-900 border-t border-b border-slate-200 my-10 relative overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
-        <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
-          <span className="text-[11px] font-extrabold uppercase tracking-widest text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800/80">
-            Guaranteed Legit Real Estate
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-            Why buyers trust legitproperties.com.ng
+        {/* Section Header */}
+        <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-slate-200/80 border border-slate-300 text-slate-800 text-xs font-bold tracking-widest uppercase shadow-xs">
+            <Scale className="w-3.5 h-3.5 text-slate-700" />
+            <span>Guaranteed Land Title & Legal Security</span>
+          </div>
+
+          <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900">
+            Why High-Net-Worth & Diaspora Buyers Trust <span className="text-slate-700">legitproperties</span>
           </h2>
-          <p className="text-xs sm:text-sm text-slate-400 font-medium">
-            We solve the biggest fear in Nigerian real estate: land disputes and invalid titles.
+          
+          <p className="text-xs sm:text-base text-slate-600 font-normal leading-relaxed">
+            Eliminating the risk of double allocations, invalid family surveys, and land grabbers with institutional legal due diligence.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* 4 Pillars Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           
-          <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-3 hover:border-emerald-500/50 transition-colors">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-              <ShieldCheck className="w-5 h-5" />
+          {/* Pillar 1 */}
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-slate-400 hover:shadow-md transition-all space-y-3 group shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-800 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+              <ShieldCheck className="w-6 h-6 text-emerald-600" />
             </div>
-            <h3 className="text-sm font-bold text-white">1. Ministry Title Audit</h3>
-            <p className="text-xs text-slate-400 leading-relaxed font-medium">
-              Every property title (C of O, Consent, Gazette) is verified with Alausa Lands Bureau & FCT AGIS before public listing.
+            <h3 className="text-base font-bold text-slate-900">
+              1. Ministry Title Verification
+            </h3>
+            <p className="text-xs text-slate-500 leading-relaxed font-medium">
+              Every property title (C of O, Governor's Consent, Gazette) is verified with Alausa Lands Bureau & FCT AGIS before public listing.
             </p>
           </div>
 
-          <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-3 hover:border-emerald-500/50 transition-colors">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-              <Lock className="w-5 h-5" />
+          {/* Pillar 2 */}
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-slate-400 hover:shadow-md transition-all space-y-3 group shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-800 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+              <Lock className="w-6 h-6 text-slate-700" />
             </div>
-            <h3 className="text-sm font-bold text-white">2. Zero Omonile Risk</h3>
-            <p className="text-xs text-slate-400 leading-relaxed font-medium">
-              100% protection against illegal land-grabbers, double allocations, or community disputes. Instant physical allocation guaranteed.
+            <h3 className="text-base font-bold text-slate-900">
+              2. Zero Omonile Risk
+            </h3>
+            <p className="text-xs text-slate-500 leading-relaxed font-medium">
+              100% protection against illegal land-grabbers or community disputes. Instant physical beaconing and allocation guaranteed.
             </p>
           </div>
 
-          <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-3 hover:border-emerald-500/50 transition-colors">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-              <UserCheck className="w-5 h-5" />
+          {/* Pillar 3 */}
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-slate-400 hover:shadow-md transition-all space-y-3 group shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-800 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+              <UserCheck className="w-6 h-6 text-slate-700" />
             </div>
-            <h3 className="text-sm font-bold text-white">3. Direct Owner Deals</h3>
-            <p className="text-xs text-slate-400 leading-relaxed font-medium">
-              Deal directly with verified title holders and authorized representatives without inflated middleman markups.
+            <h3 className="text-base font-bold text-slate-900">
+              3. Direct Principal Pricing
+            </h3>
+            <p className="text-xs text-slate-500 leading-relaxed font-medium">
+              Deal directly with verified title owners and authorized developers without predatory agent inflation or hidden charges.
             </p>
           </div>
 
-          <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-3 hover:border-emerald-500/50 transition-colors">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-              <CalendarDays className="w-5 h-5" />
+          {/* Pillar 4 */}
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-slate-400 hover:shadow-md transition-all space-y-3 group shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-800 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+              <CalendarDays className="w-6 h-6 text-slate-700" />
             </div>
-            <h3 className="text-sm font-bold text-white">4. Flexible Payment Plans</h3>
-            <p className="text-xs text-slate-400 leading-relaxed font-medium">
-              Spread payments over 3 to 12 months on select land developments and off-plan luxury apartments.
+            <h3 className="text-base font-bold text-slate-900">
+              4. Structured Payment Plans
+            </h3>
+            <p className="text-xs text-slate-500 leading-relaxed font-medium">
+              Spread investments seamlessly over 3 to 12 months on select land developments and luxury off-plan apartments.
             </p>
           </div>
 
         </div>
 
-        <div className="mt-8 text-center">
+        {/* Interactive Title Audit Banner Callout */}
+        <div className="mt-12 max-w-4xl mx-auto p-6 sm:p-8 rounded-3xl bg-slate-900 text-white border border-slate-800 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="space-y-2 text-center md:text-left">
+            <div className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-400 uppercase tracking-wider">
+              <FileCheck2 className="w-4 h-4 text-emerald-400" />
+              <span>Independent Land Title Audit</span>
+            </div>
+            <h4 className="text-lg sm:text-xl font-bold text-white">
+              Already have an eye on a property in Lagos or Abuja?
+            </h4>
+            <p className="text-xs sm:text-sm text-slate-300">
+              Enter any survey reference number or title deed to verify ownership and avoid disputes.
+            </p>
+          </div>
+
           <button
             onClick={onOpenTitleCheck}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors shadow-sm"
+            className="px-6 py-3.5 bg-white hover:bg-slate-100 text-slate-900 font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-95 whitespace-nowrap"
           >
-            <span>Verify Any Title Reference Now</span>
-            <ArrowRight className="w-4 h-4" />
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span>Launch Free Title Audit</span>
+            <ArrowRight className="w-4 h-4 text-slate-900" />
           </button>
         </div>
 
