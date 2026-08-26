@@ -52,6 +52,11 @@ export interface Property {
   virtualTourUrl?: string;
   dateAdded: string;
   verificationNotes: string;
+  whatsappNumber?: string;
+  callNumber?: string;
+  property_image?: string;
+  gallery_images?: string[];
+  property_type?: string;
 }
 
 export interface FilterOptions {

@@ -48,6 +48,8 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   
   const [featured, setFeatured] = useState(propertyToEdit?.featured ?? false);
   const [description, setDescription] = useState(propertyToEdit?.description || '');
+  const [whatsappNumber, setWhatsappNumber] = useState(propertyToEdit?.whatsappNumber || '+2348030000000');
+  const [callNumber, setCallNumber] = useState(propertyToEdit?.callNumber || '+2348030000000');
   
   const [images, setImages] = useState<string[]>(
     propertyToEdit?.images && propertyToEdit.images.length > 0
@@ -145,7 +147,6 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       images: images.length > 0 ? images : ['https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80'],
       description: description.trim() || 'Verified real estate listing with clean title clearance.',
       features,
-      amenities: ['Central Drainage', 'Security Patrol', 'Paved Road'],
       nearbyLandmarks: ['Close to Express Road', 'Prime Commercial Hub'],
       paymentPlan: {
         available: true,
@@ -154,7 +155,9 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
         monthlyEstNgn: Math.round(priceNgn * 0.7 / 12)
       },
       dateAdded: propertyToEdit?.dateAdded || new Date().toISOString().split('T')[0],
-      verificationNotes: '100% Certified Title Search at Lands Registry'
+      verificationNotes: '100% Certified Title Search at Lands Registry',
+      whatsappNumber: whatsappNumber.trim() || '+2348030000000',
+      callNumber: callNumber.trim() || '+2348030000000'
     };
 
     const res = await onSave(payload);
@@ -502,6 +505,37 @@ WITH CHECK (true);`}
                     </button>
                   </span>
                 ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Section 6: Direct Contact Numbers */}
+          <div className="space-y-3">
+            <h4 className="font-bold text-[#102033] text-xs uppercase tracking-wider border-b pb-1">
+              6. Direct Verified Contact Numbers
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">WhatsApp Number</label>
+                <input
+                  type="text"
+                  value={whatsappNumber}
+                  onChange={(e) => setWhatsappNumber(e.target.value)}
+                  placeholder="e.g. +2348030000000"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900 text-xs sm:text-sm font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Direct Call Number</label>
+                <input
+                  type="text"
+                  value={callNumber}
+                  onChange={(e) => setCallNumber(e.target.value)}
+                  placeholder="e.g. +2348030000000"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900 text-xs sm:text-sm font-mono"
+                />
               </div>
             </div>
           </div>
