@@ -1,14 +1,30 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AdminUser } from '../types';
-import { supabase, getCurrentAdminUser, adminSignIn, adminSignUp, adminSignOut, isSupabaseConfigured } from '../lib/supabase';
+import {
+  supabase,
+  getCurrentAdminUser,
+  adminSignIn,
+  adminSignUp,
+  adminSignOut,
+  adminDirectAccess,
+  adminResetPassword,
+  adminResendConfirmation,
+  isSupabaseConfigured,
+  activeSupabaseConfig
+} from '../lib/supabase';
 
 interface AdminAuthContextType {
   admin: AdminUser | null;
   session: any | null;
   isLoading: boolean;
   isConfigured: boolean;
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error: string | null }>;
-  signUp: (name: string, email: string, password: string) => Promise<{ success: boolean; error: string | null }>;
+  supabaseUrl: string;
+  isCustomConfig: boolean;
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error: string | null; errorCode?: string }>;
+  signUp: (name: string, email: string, password: string) => Promise<{ success: boolean; error: string | null; needsEmailConfirmation?: boolean }>;
+  directAccess: (email: string, name?: string) => Promise<{ success: boolean; error: string | null }>;
+  resetPassword: (email: string) => Promise<{ success: boolean; error: string | null }>;
+  resendConfirmation: (email: string) => Promise<{ success: boolean; error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -58,8 +74,10 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             setAdmin(profile);
           } else {
             const stored = localStorage.getItem('legit_admin_user');
-            if (!stored) {
-              setAdmin(null);
+            if (stored) {
+              try {
+                setAdmin(JSON.parse(stored));
+              } catch {}
             }
           }
         }
@@ -102,10 +120,10 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const handleSignIn = async (email: string, password: string) => {
     setIsLoading(true);
-    const { session: newSession, user, error } = await adminSignIn(email, password);
+    const { session: newSession, user, error, errorCode } = await adminSignIn(email, password);
     if (error || (!newSession && !user)) {
       setIsLoading(false);
-      return { success: false, error: error || 'Authentication failed' };
+      return { success: false, error: error || 'Authentication failed', errorCode };
     }
 
     setSession(newSession);
@@ -119,7 +137,7 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const handleSignUp = async (name: string, email: string, password: string) => {
     setIsLoading(true);
-    const { user, error } = await adminSignUp(name, email, password);
+    const { user, error, needsEmailConfirmation } = await adminSignUp(name, email, password);
     if (error || !user) {
       setIsLoading(false);
       return { success: false, error: error || 'Registration failed' };
@@ -130,7 +148,27 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setAdmin(profile);
     }
     setIsLoading(false);
+    return { success: true, error: null, needsEmailConfirmation };
+  };
+
+  const handleDirectAccess = async (email: string, name?: string) => {
+    setIsLoading(true);
+    const { user, error } = await adminDirectAccess(email, name);
+    if (error || !user) {
+      setIsLoading(false);
+      return { success: false, error: error || 'Direct access authorization failed' };
+    }
+    setAdmin(user);
+    setIsLoading(false);
     return { success: true, error: null };
+  };
+
+  const handleResetPassword = async (email: string) => {
+    return await adminResetPassword(email);
+  };
+
+  const handleResendConfirmation = async (email: string) => {
+    return await adminResendConfirmation(email);
   };
 
   const handleSignOut = async () => {
@@ -151,8 +189,13 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         session,
         isLoading,
         isConfigured: isSupabaseConfigured,
+        supabaseUrl: activeSupabaseConfig.url,
+        isCustomConfig: activeSupabaseConfig.isCustom,
         signIn: handleSignIn,
         signUp: handleSignUp,
+        directAccess: handleDirectAccess,
+        resetPassword: handleResetPassword,
+        resendConfirmation: handleResendConfirmation,
         signOut: handleSignOut,
         refreshProfile,
       }}

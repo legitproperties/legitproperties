@@ -349,6 +349,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                   </button>
+
+                  <button
+                    onClick={() => handleMenuAction(() => {
+                      if (typeof window !== 'undefined') {
+                        window.location.hash = '#/admin';
+                      }
+                    })}
+                    className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 text-left text-xs font-semibold text-slate-800 transition-colors cursor-pointer border-t border-slate-100 mt-1"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                      <span>Admin CMS Portal</span>
+                    </div>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-white">Login</span>
+                  </button>
                 </div>
               </div>
 
