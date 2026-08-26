@@ -5,7 +5,7 @@ import { BlogPost } from '../../types';
 interface BlogPostFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (post: Partial<BlogPost>) => Promise<boolean>;
+  onSave: (post: Partial<BlogPost>) => Promise<{ success: boolean; error?: string } | boolean>;
   postToEdit?: BlogPost | null;
 }
 
@@ -61,12 +61,20 @@ export const BlogPostFormModal: React.FC<BlogPostFormModalProps> = ({
       createdAt: postToEdit?.createdAt || new Date().toISOString()
     };
 
-    const success = await onSave(payload);
+    const res = await onSave(payload);
     setIsSaving(false);
-    if (success) {
-      onClose();
+    if (typeof res === 'boolean') {
+      if (res) {
+        onClose();
+      } else {
+        setErrorMsg('Failed to save blog post to Supabase.');
+      }
     } else {
-      setErrorMsg('Failed to save blog post to Supabase.');
+      if (res.success) {
+        onClose();
+      } else {
+        setErrorMsg(res.error || 'Failed to save blog post to Supabase.');
+      }
     }
   };
 

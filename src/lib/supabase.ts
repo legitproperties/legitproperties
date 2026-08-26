@@ -455,14 +455,100 @@ export async function fetchPropertiesFromSupabase(): Promise<Property[]> {
 }
 
 /**
- * Save / update property in Supabase `properties` table.
+ * Helper to get active Supabase Auth session and user before database operations.
  */
-export async function savePropertyToSupabase(property: Partial<Property>): Promise<{ success: boolean; data?: any; error?: string }> {
+export async function getActiveAuthSession() {
   if (!supabase) {
-    return { success: false, error: 'Supabase is not configured' };
+    return { session: null, user: null, isAuthenticated: false };
   }
 
   try {
+    const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+    if (sessionErr) {
+      console.warn('Supabase getSession error:', sessionErr);
+    }
+    const session = sessionData?.session;
+    
+    // Also verify getUser to ensure token is valid & not revoked
+    const { data: userData, error: userErr } = await supabase.auth.getUser();
+    if (userErr) {
+      console.warn('Supabase getUser notice:', userErr.message);
+    }
+    const user = userData?.user || session?.user || null;
+
+    return {
+      session,
+      user,
+      isAuthenticated: Boolean(session || user),
+      token: session?.access_token || null
+    };
+  } catch (err) {
+    console.warn('Error verifying active Supabase session:', err);
+    return { session: null, user: null, isAuthenticated: false };
+  }
+}
+
+/**
+ * Format raw Supabase database error to extract exact error.message, error.details, error.hint, and error.code.
+ */
+function formatSupabaseError(error: any, activeUser?: any): string {
+  if (!error) return 'Unknown database error occurred.';
+
+  const message = error.message || (typeof error === 'string' ? error : 'Database operation failed.');
+  const details = error.details || '';
+  const hint = error.hint || '';
+  const code = error.code || '';
+
+  const parts: string[] = [];
+  if (code) parts.push(`[Error ${code}]`);
+  parts.push(message);
+  if (details && details !== message) parts.push(`Details: ${details}`);
+  if (hint) parts.push(`Hint: ${hint}`);
+
+  let fullErrorString = parts.join(' | ');
+
+  // Diagnostic contextual hint for RLS (Row Level Security) failures
+  const isRlsError = code === '42501' || 
+    fullErrorString.toLowerCase().includes('row-level security') || 
+    fullErrorString.toLowerCase().includes('violates row-level security policy');
+
+  if (isRlsError) {
+    if (!activeUser) {
+      fullErrorString += ' — (RLS Violation: No active Supabase Auth session detected. Please sign in via the Admin Login page to include an authenticated user JWT in the request).';
+    } else {
+      fullErrorString += ` — (RLS Violation: Active user is ${activeUser.email || activeUser.id}. Please verify that your Supabase RLS policy allows INSERT/UPDATE on table 'properties' for this user role).`;
+    }
+  }
+
+  return fullErrorString;
+}
+
+/**
+ * Save / update property in Supabase `properties` table.
+ * 1. Detects and confirms active Supabase Auth session before execution.
+ * 2. Extracts exact error.message and error.details on failure.
+ */
+export async function savePropertyToSupabase(property: Partial<Property>): Promise<{ success: boolean; data?: any; error?: string; errorDetails?: string; rawError?: any }> {
+  if (!supabase) {
+    return { 
+      success: false, 
+      error: 'Supabase is not configured. Please check your Supabase Project URL and Anon Key in Database Settings.' 
+    };
+  }
+
+  try {
+    // 1. Detect and verify active Supabase Auth session
+    const { session, user, isAuthenticated } = await getActiveAuthSession();
+    
+    if (process.env.NODE_ENV !== 'production') {
+      console.info('Supabase Save Property: Auth session detected ->', {
+        isAuthenticated,
+        userEmail: user?.email,
+        userId: user?.id,
+        hasAccessToken: Boolean(session?.access_token)
+      });
+    }
+
     const dbPayload = {
       title: property.title,
       slug: property.slug || property.title?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
@@ -493,25 +579,50 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
     };
 
     if (property.id && !property.id.startsWith('temp-')) {
+      // Update existing property
       const { data, error } = await supabase
         .from('properties')
         .update(dbPayload)
         .eq('id', property.id)
         .select();
 
-      if (error) return { success: false, error: error.message };
+      if (error) {
+        console.error('Supabase Update Property Error:', error);
+        const formattedErr = formatSupabaseError(error, user);
+        return { 
+          success: false, 
+          error: formattedErr, 
+          errorDetails: error.details || error.message,
+          rawError: error 
+        };
+      }
       return { success: true, data };
     } else {
+      // Insert new property
       const { data, error } = await supabase
         .from('properties')
         .insert([dbPayload])
         .select();
 
-      if (error) return { success: false, error: error.message };
+      if (error) {
+        console.error('Supabase Insert Property Error:', error);
+        const formattedErr = formatSupabaseError(error, user);
+        return { 
+          success: false, 
+          error: formattedErr, 
+          errorDetails: error.details || error.message,
+          rawError: error 
+        };
+      }
       return { success: true, data };
     }
   } catch (err: any) {
-    return { success: false, error: err.message || 'Failed to save property' };
+    console.error('Unexpected error in savePropertyToSupabase:', err);
+    return { 
+      success: false, 
+      error: err.message || 'An unexpected error occurred while saving the property listing.',
+      errorDetails: err.details || err.stack
+    };
   }
 }
 
@@ -564,12 +675,14 @@ export async function fetchBlogPostsFromSupabase(): Promise<BlogPost[]> {
   }
 }
 
-export async function saveBlogPostToSupabase(post: Partial<BlogPost>): Promise<{ success: boolean; data?: any; error?: string }> {
+export async function saveBlogPostToSupabase(post: Partial<BlogPost>): Promise<{ success: boolean; data?: any; error?: string; errorDetails?: string; rawError?: any }> {
   if (!supabase) {
     return { success: false, error: 'Supabase is not configured' };
   }
 
   try {
+    const { user } = await getActiveAuthSession();
+
     const dbPayload = {
       title: post.title,
       slug: post.slug || post.title?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
@@ -590,7 +703,14 @@ export async function saveBlogPostToSupabase(post: Partial<BlogPost>): Promise<{
         .eq('id', post.id)
         .select();
 
-      if (error) return { success: false, error: error.message };
+      if (error) {
+        return { 
+          success: false, 
+          error: formatSupabaseError(error, user), 
+          errorDetails: error.details || error.message,
+          rawError: error 
+        };
+      }
       return { success: true, data };
     } else {
       const { data, error } = await supabase
@@ -598,11 +718,22 @@ export async function saveBlogPostToSupabase(post: Partial<BlogPost>): Promise<{
         .insert([dbPayload])
         .select();
 
-      if (error) return { success: false, error: error.message };
+      if (error) {
+        return { 
+          success: false, 
+          error: formatSupabaseError(error, user), 
+          errorDetails: error.details || error.message,
+          rawError: error 
+        };
+      }
       return { success: true, data };
     }
   } catch (err: any) {
-    return { success: false, error: err.message || 'Failed to save blog post' };
+    return { 
+      success: false, 
+      error: err.message || 'Failed to save blog post',
+      errorDetails: err.details || err.stack 
+    };
   }
 }
 

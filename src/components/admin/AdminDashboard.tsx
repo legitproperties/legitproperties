@@ -123,9 +123,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoToPublicSite
     const res = await savePropertyToSupabase(propData);
     if (res.success) {
       await loadAllData();
-      return true;
+      return { success: true };
     }
-    return false;
+    return { success: false, error: res.error };
   };
 
   const handleDeleteProperty = async (id: string) => {
@@ -143,9 +143,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoToPublicSite
     const res = await saveBlogPostToSupabase(blogData);
     if (res.success) {
       await loadAllData();
-      return true;
+      return { success: true };
     }
-    return false;
+    return { success: false, error: res.error };
   };
 
   const handleDeleteBlog = async (id: string) => {
