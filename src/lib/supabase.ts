@@ -148,8 +148,14 @@ export async function adminSignUp(name: string, email: string, password: string)
 
 /**
  * Sign in existing Admin using Supabase Auth with Email and Password.
+ * 1. Calls supabase.auth.signInWithPassword.
+ * 2. Verifies the user exists in the custom `admins` table.
+ * 3. Returns the confirmed Admin profile or an authorization error.
  */
-export async function adminSignIn(email: string, password: string): Promise<{ session: any; user: any; error: string | null; errorCode?: string }> {
+export async function adminSignIn(
+  email: string, 
+  password: string
+): Promise<{ session: any; user: AdminUser | null; error: string | null; errorCode?: string }> {
   const cleanEmail = email.trim().toLowerCase();
 
   if (!supabase) {
@@ -168,25 +174,87 @@ export async function adminSignIn(email: string, password: string): Promise<{ se
   }
 
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // Step 1: Authenticate with Supabase Auth
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
       email: cleanEmail,
       password
     });
 
-    if (error) {
+    if (authError) {
+      console.error('Supabase auth.signInWithPassword Error:', {
+        message: authError.message,
+        status: (authError as any).status
+      });
+
       let code = 'AUTH_ERROR';
-      const msg = error.message.toLowerCase();
+      const msg = authError.message.toLowerCase();
       if (msg.includes('email not confirmed') || msg.includes('not verified') || msg.includes('unconfirmed')) {
         code = 'EMAIL_NOT_CONFIRMED';
       } else if (msg.includes('invalid login credentials') || msg.includes('invalid credentials') || msg.includes('user not found')) {
         code = 'INVALID_CREDENTIALS';
       }
-      return { session: null, user: null, error: error.message, errorCode: code };
+      return { session: null, user: null, error: authError.message, errorCode: code };
     }
 
-    return { session: data.session, user: data.user, error: null };
+    if (!data.session || !data.user) {
+      return { session: null, user: null, error: 'No active session returned from Supabase Auth.', errorCode: 'NO_SESSION' };
+    }
+
+    // Step 2: Verify that this user exists in the custom `admins` table
+    const { data: adminRecord, error: adminQueryError } = await supabase
+      .from('admins')
+      .select('*')
+      .or(`id.eq.${data.user.id},email.eq.${cleanEmail}`)
+      .maybeSingle();
+
+    if (adminQueryError) {
+      console.error('Supabase query error verifying user in admins table:', {
+        message: adminQueryError.message,
+        details: adminQueryError.details,
+        code: adminQueryError.code,
+        hint: adminQueryError.hint
+      });
+    }
+
+    if (!adminRecord) {
+      console.warn(`Admin access rejected: ${cleanEmail} authenticated in Auth but was not found in 'admins' table.`);
+      // Sign out since user does not have admin record
+      await supabase.auth.signOut();
+      try {
+        localStorage.removeItem('legit_admin_user');
+      } catch {}
+
+      return {
+        session: null,
+        user: null,
+        error: `Access Denied: The account (${cleanEmail}) is not registered in the database 'admins' table.`,
+        errorCode: 'NOT_IN_ADMINS_TABLE'
+      };
+    }
+
+    // Step 3: Match confirmed! Construct verified AdminUser object
+    const verifiedAdmin: AdminUser = {
+      id: adminRecord.id || data.user.id,
+      name: adminRecord.name || data.user.user_metadata?.name || cleanNameFromEmail(cleanEmail),
+      email: adminRecord.email || cleanEmail,
+      role: adminRecord.role || 'admin',
+      created_at: adminRecord.created_at || data.user.created_at || new Date().toISOString()
+    };
+
+    try {
+      localStorage.setItem('legit_admin_user', JSON.stringify(verifiedAdmin));
+    } catch {}
+
+    console.info('Admin login successful and confirmed in admins table:', verifiedAdmin.email);
+    return { session: data.session, user: verifiedAdmin, error: null };
   } catch (err: any) {
-    return { session: null, user: null, error: err.message || 'Sign in failed.', errorCode: 'NETWORK_ERROR' };
+    console.error('Unexpected error during adminSignIn:', err);
+    return { 
+      session: null, 
+      user: null, 
+      error: err?.message || 'An unexpected sign in error occurred.', 
+      errorCode: 'UNEXPECTED_ERROR' 
+    };
   }
 }
 
@@ -294,24 +362,9 @@ export async function adminSignOut(): Promise<{ error: string | null }> {
 }
 
 /**
- * Fetch current authenticated user and their admin profile.
+ * Fetch current authenticated user and verify their admin profile in `admins` table.
  */
 export async function getCurrentAdminUser(fallbackUser?: any): Promise<AdminUser | null> {
-  // If a user object is explicitly supplied from sign-in/sign-up, map it directly
-  if (fallbackUser) {
-    const directUser: AdminUser = {
-      id: fallbackUser.id || 'admin-user',
-      name: fallbackUser.user_metadata?.name || fallbackUser.name || cleanNameFromEmail(fallbackUser.email || 'admin') + ' (Admin)',
-      email: fallbackUser.email || '',
-      role: (fallbackUser.user_metadata?.role as any) || fallbackUser.role || 'admin',
-      created_at: fallbackUser.created_at || new Date().toISOString()
-    };
-    try {
-      localStorage.setItem('legit_admin_user', JSON.stringify(directUser));
-    } catch {}
-    return directUser;
-  }
-
   if (!supabase) {
     try {
       const stored = localStorage.getItem('legit_admin_user');
@@ -323,74 +376,65 @@ export async function getCurrentAdminUser(fallbackUser?: any): Promise<AdminUser
   }
 
   try {
-    let authUser: any = null;
-    try {
-      const { data } = await supabase.auth.getUser();
-      authUser = data?.user;
-    } catch {
-      // ignore
+    let authUser: any = fallbackUser || null;
+
+    if (!authUser) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      authUser = sessionData?.session?.user;
+    }
+
+    if (!authUser) {
+      const { data: userData } = await supabase.auth.getUser();
+      authUser = userData?.user;
     }
 
     if (!authUser) {
       try {
-        const { data } = await supabase.auth.getSession();
-        authUser = data?.session?.user;
-      } catch {
-        // ignore
-      }
-    }
-
-    if (!authUser) {
-      try {
-        const stored = localStorage.getItem('legit_admin_user');
-        if (stored) return JSON.parse(stored);
+        localStorage.removeItem('legit_admin_user');
       } catch {}
       return null;
     }
 
-    // Try check admins table for extended role/name
-    try {
-      const { data: adminRecord, error: adminErr } = await supabase
-        .from('admins')
-        .select('*')
-        .eq('id', authUser.id)
-        .maybeSingle();
+    const email = (authUser.email || '').trim().toLowerCase();
 
-      if (adminRecord && !adminErr) {
-        const fullProfile: AdminUser = {
-          id: adminRecord.id,
-          name: adminRecord.name || authUser.user_metadata?.name || 'Admin User',
-          email: adminRecord.email || authUser.email || '',
-          role: adminRecord.role || 'admin',
-          created_at: adminRecord.created_at || authUser.created_at
-        };
-        try {
-          localStorage.setItem('legit_admin_user', JSON.stringify(fullProfile));
-        } catch {}
-        return fullProfile;
-      }
-    } catch (e) {
-      console.warn('Could not query admins table directly:', e);
+    // Verify presence and role in custom `admins` table
+    const { data: adminRecord, error: adminErr } = await supabase
+      .from('admins')
+      .select('*')
+      .or(`id.eq.${authUser.id},email.eq.${email}`)
+      .maybeSingle();
+
+    if (adminErr) {
+      console.error('Supabase error checking admins table:', {
+        message: adminErr.message,
+        details: adminErr.details,
+        code: adminErr.code,
+        hint: adminErr.hint
+      });
     }
 
-    // Default fallback from Supabase auth user
-    const fallbackProfile: AdminUser = {
-      id: authUser.id,
-      name: authUser.user_metadata?.name || cleanNameFromEmail(authUser.email || 'admin') + ' (Admin)',
-      email: authUser.email || '',
-      role: (authUser.user_metadata?.role as any) || 'admin',
-      created_at: authUser.created_at || new Date().toISOString()
-    };
+    if (adminRecord) {
+      const verifiedProfile: AdminUser = {
+        id: adminRecord.id || authUser.id,
+        name: adminRecord.name || authUser.user_metadata?.name || cleanNameFromEmail(email),
+        email: adminRecord.email || email,
+        role: adminRecord.role || 'admin',
+        created_at: adminRecord.created_at || authUser.created_at || new Date().toISOString()
+      };
+      try {
+        localStorage.setItem('legit_admin_user', JSON.stringify(verifiedProfile));
+      } catch {}
+      return verifiedProfile;
+    }
+
+    // User is authenticated in Supabase Auth, but NOT in custom `admins` table
+    console.warn(`User ${email} (${authUser.id}) is authenticated but not registered in 'admins' table.`);
     try {
-      localStorage.setItem('legit_admin_user', JSON.stringify(fallbackProfile));
+      localStorage.removeItem('legit_admin_user');
     } catch {}
-    return fallbackProfile;
+    return null;
   } catch (err) {
     console.error('Error fetching admin user profile:', err);
-    try {
-      const stored = localStorage.getItem('legit_admin_user');
-      if (stored) return JSON.parse(stored);
-    } catch {}
     return null;
   }
 }
@@ -415,7 +459,16 @@ export async function fetchPropertiesFromSupabase(): Promise<Property[]> {
       .select('*')
       .order('date_added', { ascending: false });
 
-    if (error || !data || data.length === 0) {
+    if (error) {
+      console.error('Supabase fetchProperties Error:', {
+        message: error.message,
+        details: error.details,
+        code: error.code
+      });
+      return INITIAL_PROPERTIES;
+    }
+
+    if (!data || data.length === 0) {
       return INITIAL_PROPERTIES;
     }
 
@@ -425,16 +478,16 @@ export async function fetchPropertiesFromSupabase(): Promise<Property[]> {
       slug: item.slug,
       type: item.type,
       category: item.category,
-      purpose: item.purpose,
+      purpose: item.purpose || 'Investment',
       location: typeof item.location === 'string' ? JSON.parse(item.location) : item.location,
-      priceNgn: item.price_ngn ?? item.priceNgn,
-      sizeSqm: item.size_sqm ?? item.sizeSqm,
-      plotsCount: item.plots_count ?? item.plotsCount,
+      priceNgn: item.price_ngn ?? item.priceNgn ?? item.price ?? 0,
+      sizeSqm: item.size_sqm ?? item.sizeSqm ?? item.size,
+      plotsCount: item.plots_count ?? item.plotsCount ?? item.plots ?? 1,
       bedrooms: item.bedrooms,
       bathrooms: item.bathrooms,
-      titleStatus: item.title_status ?? item.titleStatus,
+      titleStatus: item.title_status ?? item.titleStatus ?? 'Certificate of Occupancy (C of O)',
       titleVerified: item.title_verified ?? item.titleVerified ?? true,
-      verificationDocNo: item.verification_doc_no ?? item.verificationDocNo,
+      verificationDocNo: item.verification_doc_no ?? item.verificationDocNo ?? '',
       developerInfo: typeof item.developer_info === 'string' ? JSON.parse(item.developer_info) : (item.developerInfo || { name: 'Legit Verified', trackRecord: '10+ Years', verifiedStatus: 'CAC Verified' }),
       featured: item.featured ?? false,
       images: Array.isArray(item.images) ? item.images : (typeof item.images === 'string' ? JSON.parse(item.images) : []),
@@ -445,7 +498,7 @@ export async function fetchPropertiesFromSupabase(): Promise<Property[]> {
       paymentPlan: typeof item.payment_plan === 'string' ? JSON.parse(item.payment_plan) : (item.paymentPlan || { available: true, minDownpaymentPercent: 20, maxTenorMonths: 12 }),
       completionDate: item.completion_date ?? item.completionDate,
       virtualTourUrl: item.virtual_tour_url ?? item.virtualTourUrl,
-      dateAdded: item.date_added ?? item.dateAdded ?? new Date().toISOString().split('T')[0],
+      dateAdded: item.date_added ?? item.created_at ?? item.dateAdded ?? new Date().toISOString().split('T')[0],
       verificationNotes: item.verification_notes ?? item.verificationNotes ?? '100% Verified'
     }));
   } catch (err) {
@@ -526,7 +579,8 @@ function formatSupabaseError(error: any, activeUser?: any): string {
 /**
  * Save / update property in Supabase `properties` table.
  * 1. Detects and confirms active Supabase Auth session before execution.
- * 2. Extracts exact error.message and error.details on failure.
+ * 2. Maps all fields from frontend state to database schema columns.
+ * 3. Explicitly logs error.message and error.details to console on failure.
  */
 export async function savePropertyToSupabase(property: Partial<Property>): Promise<{ success: boolean; data?: any; error?: string; errorDetails?: string; rawError?: any }> {
   if (!supabase) {
@@ -541,7 +595,7 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
     const { session, user, isAuthenticated } = await getActiveAuthSession();
     
     if (process.env.NODE_ENV !== 'production') {
-      console.info('Supabase Save Property: Auth session detected ->', {
+      console.info('Supabase Save Property: Auth session status ->', {
         isAuthenticated,
         userEmail: user?.email,
         userId: user?.id,
@@ -549,33 +603,44 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
       });
     }
 
+    // 2. Strict mapping of frontend form state to Supabase database column schema
+    const rawPrice = property.priceNgn ?? (property as any).price ?? 0;
+    const numericPrice = typeof rawPrice === 'number' ? rawPrice : Number(rawPrice) || 0;
+    const numericSize = property.sizeSqm ? Number(property.sizeSqm) : null;
+    const numericPlots = property.plotsCount ? Number(property.plotsCount) : 1;
+    const numericBedrooms = property.bedrooms !== undefined && property.bedrooms !== null ? Number(property.bedrooms) : null;
+    const numericBathrooms = property.bathrooms !== undefined && property.bathrooms !== null ? Number(property.bathrooms) : null;
+
+    const safeTitle = (property.title || '').trim();
+    const safeSlug = property.slug?.trim() || safeTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
     const dbPayload = {
-      title: property.title,
-      slug: property.slug || property.title?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      type: property.type,
-      category: property.category,
+      title: safeTitle,
+      slug: safeSlug,
+      type: property.type || 'land',
+      category: property.category || 'prime_land',
       purpose: property.purpose || 'Investment',
-      location: typeof property.location === 'object' ? JSON.stringify(property.location) : property.location,
-      price_ngn: property.priceNgn,
-      size_sqm: property.sizeSqm || null,
-      plots_count: property.plotsCount || 1,
-      bedrooms: property.bedrooms || null,
-      bathrooms: property.bathrooms || null,
-      title_status: property.titleStatus,
-      title_verified: property.titleVerified ?? true,
+      location: typeof property.location === 'object' ? property.location : { address: 'Prime Axis', neighborhood: 'Prime', city: 'Lagos', state: 'Lagos State' },
+      price_ngn: numericPrice,
+      size_sqm: numericSize,
+      plots_count: numericPlots,
+      bedrooms: numericBedrooms,
+      bathrooms: numericBathrooms,
+      title_status: property.titleStatus || 'Certificate of Occupancy (C of O)',
+      title_verified: property.titleVerified !== undefined ? Boolean(property.titleVerified) : true,
       verification_doc_no: property.verificationDocNo || '',
-      developer_info: typeof property.developerInfo === 'object' ? JSON.stringify(property.developerInfo) : property.developerInfo,
-      featured: property.featured ?? false,
-      images: Array.isArray(property.images) ? property.images : [],
-      description: property.description || '',
-      features: property.features || [],
-      amenities: property.amenities || [],
-      nearby_landmarks: property.nearbyLandmarks || [],
-      payment_plan: typeof property.paymentPlan === 'object' ? JSON.stringify(property.paymentPlan) : property.paymentPlan,
+      developer_info: typeof property.developerInfo === 'object' ? property.developerInfo : { name: 'Legit Verified', trackRecord: '10+ Years', verifiedStatus: 'CAC Verified' },
+      featured: Boolean(property.featured),
+      images: Array.isArray(property.images) && property.images.length > 0 ? property.images : ['https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80'],
+      description: property.description?.trim() || 'Verified real estate property with clean title clearance.',
+      features: Array.isArray(property.features) ? property.features : [],
+      amenities: Array.isArray(property.amenities) ? property.amenities : [],
+      nearby_landmarks: Array.isArray(property.nearbyLandmarks) ? property.nearbyLandmarks : [],
+      payment_plan: typeof property.paymentPlan === 'object' ? property.paymentPlan : { available: true, minDownpaymentPercent: 20, maxTenorMonths: 12 },
       completion_date: property.completionDate || null,
       virtual_tour_url: property.virtualTourUrl || null,
       date_added: property.dateAdded || new Date().toISOString().split('T')[0],
-      verification_notes: property.verificationNotes || 'Verified Title'
+      verification_notes: property.verificationNotes || '100% Certified Title Search at Lands Registry'
     };
 
     if (property.id && !property.id.startsWith('temp-')) {
@@ -587,7 +652,16 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
         .select();
 
       if (error) {
-        console.error('Supabase Update Property Error:', error);
+        // Explicitly log the exact Supabase error (message, details, code, hint)
+        console.error('Supabase Property Update Failed:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          payload: dbPayload
+        });
+        console.error(`[Supabase Error Details] Message: ${error.message} | Details: ${error.details || 'None'} | Code: ${error.code || 'None'}`);
+
         const formattedErr = formatSupabaseError(error, user);
         return { 
           success: false, 
@@ -605,7 +679,16 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
         .select();
 
       if (error) {
-        console.error('Supabase Insert Property Error:', error);
+        // Explicitly log the exact Supabase error (message, details, code, hint)
+        console.error('Supabase Property Insert Failed:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          payload: dbPayload
+        });
+        console.error(`[Supabase Error Details] Message: ${error.message} | Details: ${error.details || 'None'} | Code: ${error.code || 'None'}`);
+
         const formattedErr = formatSupabaseError(error, user);
         return { 
           success: false, 
@@ -617,7 +700,11 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
       return { success: true, data };
     }
   } catch (err: any) {
-    console.error('Unexpected error in savePropertyToSupabase:', err);
+    console.error('Unexpected exception in savePropertyToSupabase:', {
+      message: err?.message,
+      details: err?.details || err?.stack,
+      raw: err
+    });
     return { 
       success: false, 
       error: err.message || 'An unexpected error occurred while saving the property listing.',

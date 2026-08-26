@@ -66,17 +66,23 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        const { data: { session: initialSession }, error: sessionErr } = await supabase.auth.getSession();
+        if (sessionErr) {
+          console.warn('Initial session check notice:', sessionErr.message);
+        }
+
         if (isMounted) {
           setSession(initialSession);
           if (initialSession?.user) {
             const profile = await getCurrentAdminUser(initialSession.user);
-            setAdmin(profile);
+            if (isMounted) {
+              setAdmin(profile);
+            }
           } else {
-            const stored = localStorage.getItem('legit_admin_user');
-            if (stored) {
+            if (isMounted) {
+              setAdmin(null);
               try {
-                setAdmin(JSON.parse(stored));
+                localStorage.removeItem('legit_admin_user');
               } catch {}
             }
           }
@@ -99,14 +105,21 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setSession(newSession);
         if (newSession?.user) {
           const profile = await getCurrentAdminUser(newSession.user);
-          setAdmin(profile);
+          if (isMounted) {
+            setAdmin(profile);
+          }
         } else if (event === 'SIGNED_OUT') {
-          setAdmin(null);
-          try {
-            localStorage.removeItem('legit_admin_user');
-          } catch {}
+          if (isMounted) {
+            setAdmin(null);
+            setSession(null);
+            try {
+              localStorage.removeItem('legit_admin_user');
+            } catch {}
+          }
         }
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       });
 
       return () => {
@@ -120,19 +133,30 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const handleSignIn = async (email: string, password: string) => {
     setIsLoading(true);
-    const { session: newSession, user, error, errorCode } = await adminSignIn(email, password);
-    if (error || (!newSession && !user)) {
-      setIsLoading(false);
-      return { success: false, error: error || 'Authentication failed', errorCode };
-    }
+    try {
+      const { session: newSession, user: verifiedAdmin, error, errorCode } = await adminSignIn(email, password);
+      if (error || !verifiedAdmin) {
+        setSession(null);
+        setAdmin(null);
+        return { 
+          success: false, 
+          error: error || 'Authentication failed: Account not authorized in admins table.', 
+          errorCode 
+        };
+      }
 
-    setSession(newSession);
-    const profile = await getCurrentAdminUser(user || newSession?.user);
-    if (profile) {
-      setAdmin(profile);
+      setSession(newSession);
+      setAdmin(verifiedAdmin);
+      return { success: true, error: null };
+    } catch (err: any) {
+      console.error('Error in handleSignIn:', err);
+      return { 
+        success: false, 
+        error: err?.message || 'Login failed unexpectedly.' 
+      };
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
-    return { success: true, error: null };
   };
 
   const handleSignUp = async (name: string, email: string, password: string) => {
