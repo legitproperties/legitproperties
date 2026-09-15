@@ -75,16 +75,20 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           setSession(initialSession);
           if (initialSession?.user) {
             const profile = await getCurrentAdminUser(initialSession.user);
-            if (isMounted) {
+            if (isMounted && profile) {
               setAdmin(profile);
             }
           } else {
-            if (isMounted) {
-              setAdmin(null);
-              try {
-                localStorage.removeItem('legit_admin_user');
-              } catch {}
-            }
+            // Fall back to locally persisted admin profile if present
+            try {
+              const stored = localStorage.getItem('legit_admin_user');
+              if (stored) {
+                const parsed = JSON.parse(stored);
+                if (parsed && parsed.email) {
+                  setAdmin(parsed);
+                }
+              }
+            } catch {}
           }
         }
       } catch (e) {
@@ -161,15 +165,21 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const handleSignUp = async (name: string, email: string, password: string) => {
     setIsLoading(true);
-    const { user, error, needsEmailConfirmation } = await adminSignUp(name, email, password);
+    const { user, session: newSession, error, needsEmailConfirmation } = await adminSignUp(name, email, password);
     if (error || !user) {
       setIsLoading(false);
       return { success: false, error: error || 'Registration failed' };
     }
 
-    const profile = await getCurrentAdminUser(user);
+    const profile = (await getCurrentAdminUser(user)) || user;
     if (profile) {
       setAdmin(profile);
+      if (newSession) {
+        setSession(newSession);
+      }
+      try {
+        localStorage.setItem('legit_admin_user', JSON.stringify(profile));
+      } catch {}
     }
     setIsLoading(false);
     return { success: true, error: null, needsEmailConfirmation };

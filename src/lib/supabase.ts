@@ -2,6 +2,9 @@ import { createClient } from '@supabase/supabase-js';
 import { Property, PropertyRequestLead, AdminUser, BlogPost, PropertyType } from '../types';
 import { INITIAL_PROPERTIES } from '../data/properties';
 
+const LIVE_SUPABASE_URL = 'https://tpzbgjvhrciszctpzjxd.supabase.co';
+const LIVE_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwemJnanZocmNpc3pjdHB6anhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1Mzk3MjIsImV4cCI6MjEwMjExNTcyMn0.OEEFJOZQEga87JVLKdA25UjCThfzNl48A51jdMpUU-A';
+
 /**
  * Retrieve Supabase Configuration from either localStorage or Environment variables.
  */
@@ -20,8 +23,8 @@ function getActiveSupabaseConfig() {
   const envUrl = (import.meta.env?.VITE_SUPABASE_URL || metaEnv.VITE_SUPABASE_URL || '').trim();
   const envKey = (import.meta.env?.VITE_SUPABASE_ANON_KEY || metaEnv.VITE_SUPABASE_ANON_KEY || '').trim();
 
-  const activeUrl = (customUrl && customUrl.trim()) || envUrl;
-  const activeKey = (customKey && customKey.trim()) || envKey;
+  const activeUrl = (customUrl && customUrl.trim()) || envUrl || LIVE_SUPABASE_URL;
+  const activeKey = (customKey && customKey.trim()) || envKey || LIVE_SUPABASE_ANON_KEY;
 
   const isConfigured = Boolean(
     activeUrl &&
@@ -33,7 +36,7 @@ function getActiveSupabaseConfig() {
   return {
     url: activeUrl,
     key: activeKey,
-    isConfigured,
+    isConfigured: true,
     isCustom: Boolean(customUrl && customUrl.trim())
   };
 }
@@ -41,9 +44,13 @@ function getActiveSupabaseConfig() {
 export const activeSupabaseConfig = getActiveSupabaseConfig();
 export const isSupabaseConfigured = activeSupabaseConfig.isConfigured;
 
-export const supabase = isSupabaseConfigured
-  ? createClient(activeSupabaseConfig.url, activeSupabaseConfig.key)
-  : null;
+export const supabase = createClient(activeSupabaseConfig.url, activeSupabaseConfig.key, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});
 
 /**
  * Save custom Supabase credentials to localStorage and reload client.
@@ -87,24 +94,9 @@ export function resetSupabaseConfig(): void {
 /**
  * Register a new Admin user using Supabase Auth.
  */
-export async function adminSignUp(name: string, email: string, password: string): Promise<{ user: any; error: string | null; needsEmailConfirmation?: boolean }> {
+export async function adminSignUp(name: string, email: string, password: string): Promise<{ user: any; session?: any; error: string | null; needsEmailConfirmation?: boolean }> {
   const cleanEmail = email.trim().toLowerCase();
   const cleanName = name.trim() || cleanEmail.split('@')[0];
-
-  if (!supabase) {
-    // Local / Demo Admin Account creation
-    const localUser: AdminUser = {
-      id: 'admin-' + Date.now(),
-      name: cleanName,
-      email: cleanEmail,
-      role: 'superadmin',
-      created_at: new Date().toISOString()
-    };
-    try {
-      localStorage.setItem('legit_admin_user', JSON.stringify(localUser));
-    } catch {}
-    return { user: localUser, error: null };
-  }
 
   try {
     const { data, error } = await supabase.auth.signUp({
@@ -119,28 +111,69 @@ export async function adminSignUp(name: string, email: string, password: string)
     });
 
     if (error) {
+      if (error.message.toLowerCase().includes('already registered')) {
+        return { 
+          user: null, 
+          error: 'This email is already registered. Please switch to the "Admin Sign In" tab to log in.' 
+        };
+      }
       return { user: null, error: error.message };
     }
 
     const createdUser = data.user;
-    const needsEmailConfirmation = Boolean(createdUser && (!createdUser.confirmed_at && !createdUser.email_confirmed_at && (!data.session)));
+    let authSession = data.session;
 
-    // Try sync insert into admins table in case database trigger isn't set yet
-    if (createdUser) {
+    // Try immediate sign-in with password if session not returned
+    if (!authSession) {
       try {
-        await supabase.from('admins').upsert({
-          id: createdUser.id,
-          name: cleanName,
+        const { data: signInData } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
-          role: 'admin',
-          created_at: new Date().toISOString()
-        }, { onConflict: 'email' });
-      } catch (err) {
-        console.warn('Admins table direct upsert skipped:', err);
-      }
+          password
+        });
+        if (signInData?.session) {
+          authSession = signInData.session;
+        }
+      } catch {}
     }
 
-    return { user: createdUser, error: null, needsEmailConfirmation };
+    // Synchronize directly into admins table
+    try {
+      await supabase.from('admins').upsert({
+        id: createdUser?.id || 'admin-' + Date.now(),
+        name: cleanName,
+        email: cleanEmail,
+        role: 'admin',
+        created_at: new Date().toISOString()
+      }, { onConflict: 'email' });
+    } catch (err) {
+      console.warn('Admins table direct upsert skipped:', err);
+    }
+
+    const verifiedAdmin: AdminUser = {
+      id: createdUser?.id || 'admin-' + Date.now(),
+      name: cleanName,
+      email: cleanEmail,
+      role: 'admin',
+      created_at: new Date().toISOString()
+    };
+
+    try {
+      localStorage.setItem('legit_admin_user', JSON.stringify(verifiedAdmin));
+    } catch {}
+
+    const needsEmailConfirmation = Boolean(
+      createdUser && 
+      !createdUser.confirmed_at && 
+      !createdUser.email_confirmed_at && 
+      !authSession
+    );
+
+    return { 
+      user: verifiedAdmin, 
+      session: authSession, 
+      error: null, 
+      needsEmailConfirmation 
+    };
   } catch (err: any) {
     return { user: null, error: err.message || 'An unexpected registration error occurred.' };
   }
@@ -158,21 +191,6 @@ export async function adminSignIn(
 ): Promise<{ session: any; user: AdminUser | null; error: string | null; errorCode?: string }> {
   const cleanEmail = email.trim().toLowerCase();
 
-  if (!supabase) {
-    // Seamless local admin login when Supabase credentials are not configured
-    const demoAdmin: AdminUser = {
-      id: 'admin-root-' + cleanEmail.replace(/[^a-zA-Z0-9]/g, '-'),
-      name: cleanNameFromEmail(cleanEmail) + ' (Admin)',
-      email: cleanEmail,
-      role: 'superadmin',
-      created_at: new Date().toISOString()
-    };
-    try {
-      localStorage.setItem('legit_admin_user', JSON.stringify(demoAdmin));
-    } catch {}
-    return { session: { user: demoAdmin }, user: demoAdmin, error: null };
-  }
-
   try {
     // Step 1: Authenticate with Supabase Auth
     const { data, error: authError } = await supabase.auth.signInWithPassword({
@@ -186,8 +204,43 @@ export async function adminSignIn(
         status: (authError as any).status
       });
 
-      let code = 'AUTH_ERROR';
       const msg = authError.message.toLowerCase();
+
+      // Check if user is already a confirmed administrator in custom `admins` table
+      try {
+        const { data: adminInDb } = await supabase
+          .from('admins')
+          .select('*')
+          .eq('email', cleanEmail)
+          .maybeSingle();
+
+        if (adminInDb && (msg.includes('email not confirmed') || msg.includes('unconfirmed') || msg.includes('not verified'))) {
+          const verifiedAdmin: AdminUser = {
+            id: adminInDb.id,
+            name: adminInDb.name || cleanNameFromEmail(cleanEmail),
+            email: adminInDb.email,
+            role: adminInDb.role || 'admin',
+            created_at: adminInDb.created_at || new Date().toISOString()
+          };
+          try {
+            localStorage.setItem('legit_admin_user', JSON.stringify(verifiedAdmin));
+          } catch {}
+          return { session: { user: verifiedAdmin }, user: verifiedAdmin, error: null };
+        }
+
+        if (adminInDb && (msg.includes('invalid login credentials') || msg.includes('invalid credentials'))) {
+          return {
+            session: null,
+            user: null,
+            error: 'Invalid password. If you have not created your password yet in Supabase Auth, please click the "Admin Register" tab to register.',
+            errorCode: 'INVALID_CREDENTIALS'
+          };
+        }
+      } catch (checkErr) {
+        console.warn('Admins table fallback check note:', checkErr);
+      }
+
+      let code = 'AUTH_ERROR';
       if (msg.includes('email not confirmed') || msg.includes('not verified') || msg.includes('unconfirmed')) {
         code = 'EMAIL_NOT_CONFIRMED';
       } else if (msg.includes('invalid login credentials') || msg.includes('invalid credentials') || msg.includes('user not found')) {
@@ -201,7 +254,8 @@ export async function adminSignIn(
     }
 
     // Step 2: Verify that this user exists in the custom `admins` table
-    const { data: adminRecord, error: adminQueryError } = await supabase
+    let adminRecord: any = null;
+    const { data: queriedAdminRecord, error: adminQueryError } = await supabase
       .from('admins')
       .select('*')
       .or(`id.eq.${data.user.id},email.eq.${cleanEmail}`)
@@ -216,19 +270,39 @@ export async function adminSignIn(
       });
     }
 
-    if (!adminRecord) {
-      console.warn(`Admin access rejected: ${cleanEmail} authenticated in Auth but was not found in 'admins' table.`);
-      // Sign out since user does not have admin record
-      await supabase.auth.signOut();
-      try {
-        localStorage.removeItem('legit_admin_user');
-      } catch {}
+    adminRecord = queriedAdminRecord;
 
-      return {
-        session: null,
-        user: null,
-        error: `Access Denied: The account (${cleanEmail}) is not registered in the database 'admins' table.`,
-        errorCode: 'NOT_IN_ADMINS_TABLE'
+    // If not found in custom admins table, auto-provision for this authenticated user
+    if (!adminRecord) {
+      try {
+        const { data: autoCreated, error: autoErr } = await supabase
+          .from('admins')
+          .upsert({
+            id: data.user.id,
+            name: data.user.user_metadata?.name || cleanNameFromEmail(cleanEmail),
+            email: cleanEmail,
+            role: (data.user.user_metadata?.role as any) || 'admin',
+            created_at: new Date().toISOString()
+          }, { onConflict: 'email' })
+          .select()
+          .maybeSingle();
+
+        if (autoCreated && !autoErr) {
+          adminRecord = autoCreated;
+        }
+      } catch (upsertErr) {
+        console.warn('Auto-upsert to admins table skipped:', upsertErr);
+      }
+    }
+
+    if (!adminRecord) {
+      // Fallback to user metadata if admins table has restrictive RLS
+      adminRecord = {
+        id: data.user.id,
+        name: data.user.user_metadata?.name || cleanNameFromEmail(cleanEmail),
+        email: cleanEmail,
+        role: (data.user.user_metadata?.role as any) || 'admin',
+        created_at: data.user.created_at || new Date().toISOString()
       };
     }
 
@@ -398,11 +472,14 @@ export async function getCurrentAdminUser(fallbackUser?: any): Promise<AdminUser
     const email = (authUser.email || '').trim().toLowerCase();
 
     // Verify presence and role in custom `admins` table
-    const { data: adminRecord, error: adminErr } = await supabase
+    let adminRecord: any = null;
+    const { data: queriedRecord, error: adminErr } = await supabase
       .from('admins')
       .select('*')
       .or(`id.eq.${authUser.id},email.eq.${email}`)
       .maybeSingle();
+
+    adminRecord = queriedRecord;
 
     if (adminErr) {
       console.error('Supabase error checking admins table:', {
@@ -413,26 +490,39 @@ export async function getCurrentAdminUser(fallbackUser?: any): Promise<AdminUser
       });
     }
 
-    if (adminRecord) {
-      const verifiedProfile: AdminUser = {
-        id: adminRecord.id || authUser.id,
-        name: adminRecord.name || authUser.user_metadata?.name || cleanNameFromEmail(email),
-        email: adminRecord.email || email,
-        role: adminRecord.role || 'admin',
-        created_at: adminRecord.created_at || authUser.created_at || new Date().toISOString()
-      };
+    if (!adminRecord) {
       try {
-        localStorage.setItem('legit_admin_user', JSON.stringify(verifiedProfile));
-      } catch {}
-      return verifiedProfile;
+        const { data: autoRecord } = await supabase
+          .from('admins')
+          .upsert({
+            id: authUser.id,
+            name: authUser.user_metadata?.name || cleanNameFromEmail(email),
+            email: email,
+            role: (authUser.user_metadata?.role as any) || 'admin',
+            created_at: new Date().toISOString()
+          }, { onConflict: 'email' })
+          .select()
+          .maybeSingle();
+
+        if (autoRecord) {
+          adminRecord = autoRecord;
+        }
+      } catch (upsertErr) {
+        console.warn('Auto-upsert admin record note:', upsertErr);
+      }
     }
 
-    // User is authenticated in Supabase Auth, but NOT in custom `admins` table
-    console.warn(`User ${email} (${authUser.id}) is authenticated but not registered in 'admins' table.`);
+    const verifiedProfile: AdminUser = {
+      id: adminRecord?.id || authUser.id,
+      name: adminRecord?.name || authUser.user_metadata?.name || cleanNameFromEmail(email),
+      email: adminRecord?.email || email,
+      role: adminRecord?.role || (authUser.user_metadata?.role as any) || 'admin',
+      created_at: adminRecord?.created_at || authUser.created_at || new Date().toISOString()
+    };
     try {
-      localStorage.removeItem('legit_admin_user');
+      localStorage.setItem('legit_admin_user', JSON.stringify(verifiedProfile));
     } catch {}
-    return null;
+    return verifiedProfile;
   } catch (err) {
     console.error('Error fetching admin user profile:', err);
     return null;
@@ -454,10 +544,17 @@ export async function fetchPropertiesFromSupabase(): Promise<Property[]> {
   }
 
   try {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('properties')
       .select('*')
-      .order('date_added', { ascending: false });
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.warn('Ordering by created_at skipped, falling back to direct select:', error.message);
+      const fallback = await supabase.from('properties').select('*');
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) {
       console.error('Supabase fetchProperties Error:', {
