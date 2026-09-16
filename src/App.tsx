@@ -329,7 +329,7 @@ function MainApp() {
                 Live Verified Properties Coming Soon
               </h3>
               <p className="text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
-                All live listings added to your connected Supabase database will automatically display here with Certificate of Occupancy (C of O), Governor's Consent, and high-resolution media.
+                All verified listings added to the database will automatically display here with Certificate of Occupancy (C of O), Governor's Consent, and high-resolution media.
               </p>
             </div>
 

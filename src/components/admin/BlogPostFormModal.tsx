@@ -67,13 +67,13 @@ export const BlogPostFormModal: React.FC<BlogPostFormModalProps> = ({
       if (res) {
         onClose();
       } else {
-        setErrorMsg('Failed to save blog post to Supabase.');
+        setErrorMsg('Failed to save blog post.');
       }
     } else {
       if (res.success) {
         onClose();
       } else {
-        setErrorMsg(res.error || 'Failed to save blog post to Supabase.');
+        setErrorMsg(res.error || 'Failed to save blog post to database.');
       }
     }
   };
@@ -92,7 +92,7 @@ export const BlogPostFormModal: React.FC<BlogPostFormModalProps> = ({
               <h3 className="font-extrabold text-base sm:text-lg">
                 {postToEdit ? 'Edit Article' : 'Create New Blog Post'}
               </h3>
-              <p className="text-xs text-slate-400">Syncs to Supabase <code className="text-emerald-400 font-mono">blog_posts</code> table</p>
+              <p className="text-xs text-slate-400">Syncs to <code className="text-emerald-400 font-mono">blog_posts</code> database</p>
             </div>
           </div>
           <button

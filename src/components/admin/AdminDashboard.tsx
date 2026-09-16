@@ -306,10 +306,10 @@ CREATE POLICY "Admins can view leads" ON public.property_leads FOR SELECT USING 
         {/* Right Admin Profile & Actions */}
         <div className="flex items-center gap-2.5 sm:gap-4">
           
-          {/* Supabase status badge */}
+          {/* Database status badge */}
           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/80 text-xs font-medium text-slate-300">
             <div className={`w-2 h-2 rounded-full ${isConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-            <span>{isConfigured ? 'Supabase Live' : 'Supabase Setup'}</span>
+            <span>{isConfigured ? 'Live Database' : 'Database Setup'}</span>
           </div>
 
           {/* View public site */}
@@ -514,7 +514,7 @@ CREATE POLICY "Admins can view leads" ON public.property_leads FOR SELECT USING 
                   </div>
                   <div className="mt-3 flex items-baseline gap-2">
                     <span className="text-3xl font-extrabold text-white">{stats.totalProperties}</span>
-                    <span className="text-[11px] text-emerald-400 font-medium">Supabase Synced</span>
+                    <span className="text-[11px] text-emerald-400 font-medium">Cloud Synced</span>
                   </div>
                   <button
                     onClick={() => setActiveTab('properties')}
@@ -574,7 +574,7 @@ CREATE POLICY "Admins can view leads" ON public.property_leads FOR SELECT USING 
                   </div>
                   <div className="mt-3 flex items-baseline gap-2">
                     <span className="text-lg font-bold text-white">PostgreSQL</span>
-                    <span className="text-[11px] text-emerald-400 font-medium">Supabase</span>
+                    <span className="text-[11px] text-emerald-400 font-medium">Cloud Database</span>
                   </div>
                   <button
                     onClick={() => setActiveTab('database')}
@@ -592,7 +592,7 @@ CREATE POLICY "Admins can view leads" ON public.property_leads FOR SELECT USING 
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-extrabold text-base text-white">Live Properties on Public Homepage</h3>
-                    <p className="text-xs text-slate-400">Synced directly with Supabase <code className="text-emerald-400 font-mono">properties</code> table</p>
+                    <p className="text-xs text-slate-400">Synced directly with cloud <code className="text-emerald-400 font-mono">properties</code> database</p>
                   </div>
                   <button
                     onClick={() => {
@@ -966,8 +966,8 @@ CREATE POLICY "Admins can view leads" ON public.property_leads FOR SELECT USING 
             <div className="space-y-6 max-w-7xl mx-auto animate-fadeIn">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-extrabold text-white">Supabase Schema & Configuration</h2>
-                  <p className="text-xs text-slate-400">Run this SQL in your Supabase SQL Editor to set up all tables and RLS security policies</p>
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-white">Database Schema & Security Policies</h2>
+                  <p className="text-xs text-slate-400">Run this SQL in your Database SQL Editor to set up all tables and RLS security policies</p>
                 </div>
 
                 <button
@@ -982,7 +982,7 @@ CREATE POLICY "Admins can view leads" ON public.property_leads FOR SELECT USING 
               {/* SQL Code Box */}
               <div className="bg-slate-950 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl relative">
                 <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800 text-xs text-slate-400">
-                  <span className="font-mono text-emerald-400">supabase_schema_setup.sql</span>
+                  <span className="font-mono text-emerald-400">database_schema_setup.sql</span>
                   <span>PostgreSQL • Ready to execute</span>
                 </div>
                 <pre className="text-xs font-mono text-slate-300 overflow-x-auto p-2 leading-relaxed">

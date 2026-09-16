@@ -167,14 +167,14 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       if (res) {
         onClose();
       } else {
-        setErrorMsg('Failed to save property to Supabase. Please check database permissions or network connection.');
+        setErrorMsg('Failed to save property. Please check database permissions or network connection.');
       }
     } else {
       if (res.success) {
         onClose();
       } else {
-        // Display exact error message and details from Supabase
-        setErrorMsg(res.error || 'Failed to save property to Supabase.');
+        // Display exact error message and details from database
+        setErrorMsg(res.error || 'Failed to save property to database.');
       }
     }
   };
@@ -193,7 +193,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
               <h3 className="font-extrabold text-base sm:text-lg">
                 {propertyToEdit ? 'Edit Property Listing' : 'Publish Live Verified Property'}
               </h3>
-              <p className="text-xs text-slate-400">Syncs directly to Supabase <code className="text-emerald-400 font-mono">properties</code> table</p>
+              <p className="text-xs text-slate-400">Syncs directly to <code className="text-emerald-400 font-mono">properties</code> database</p>
             </div>
           </div>
           <button
@@ -213,7 +213,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                 <div className="flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold text-red-950 block mb-0.5">Supabase Operation Error:</span>
+                    <span className="font-bold text-red-950 block mb-0.5">Database Operation Notice:</span>
                     <p className="font-mono text-[11px] leading-relaxed break-words bg-red-100/70 p-2.5 rounded-xl border border-red-200/80 text-red-900">
                       {errorMsg}
                     </p>
@@ -233,7 +233,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
               {errorMsg.toLowerCase().includes('row-level security') && (
                 <div className="text-[11px] text-red-800 bg-white/80 p-2.5 rounded-xl border border-red-200">
                   <strong className="block text-red-950 mb-1">💡 Row Level Security (RLS) Tip:</strong>
-                  Ensure your Supabase table policy allows inserts for authenticated users:
+                  Ensure your database table policy allows inserts for authenticated users:
                   <pre className="mt-1 p-2 bg-slate-900 text-emerald-400 rounded-lg font-mono text-[10px] overflow-x-auto">
 {`CREATE POLICY "Enable all for authenticated users" 
 ON public.properties FOR ALL 
@@ -559,7 +559,7 @@ WITH CHECK (true);`}
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  <span>{propertyToEdit ? 'Save Property Changes' : 'Publish Property to Supabase'}</span>
+                  <span>{propertyToEdit ? 'Save Property Changes' : 'Publish Property Listing'}</span>
                 </>
               )}
             </button>

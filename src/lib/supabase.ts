@@ -92,96 +92,23 @@ export function resetSupabaseConfig(): void {
  */
 
 /**
- * Register a new Admin user using Supabase Auth.
+ * Administrator registration is disabled by policy.
+ * Public administrator registration is forbidden; only authorized accounts are allowed.
  */
-export async function adminSignUp(name: string, email: string, password: string): Promise<{ user: any; session?: any; error: string | null; needsEmailConfirmation?: boolean }> {
-  const cleanEmail = email.trim().toLowerCase();
-  const cleanName = name.trim() || cleanEmail.split('@')[0];
-
-  try {
-    const { data, error } = await supabase.auth.signUp({
-      email: cleanEmail,
-      password,
-      options: {
-        data: {
-          name: cleanName,
-          role: 'admin'
-        }
-      }
-    });
-
-    if (error) {
-      if (error.message.toLowerCase().includes('already registered')) {
-        return { 
-          user: null, 
-          error: 'This email is already registered. Please switch to the "Admin Sign In" tab to log in.' 
-        };
-      }
-      return { user: null, error: error.message };
-    }
-
-    const createdUser = data.user;
-    let authSession = data.session;
-
-    // Try immediate sign-in with password if session not returned
-    if (!authSession) {
-      try {
-        const { data: signInData } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password
-        });
-        if (signInData?.session) {
-          authSession = signInData.session;
-        }
-      } catch {}
-    }
-
-    // Synchronize directly into admins table
-    try {
-      await supabase.from('admins').upsert({
-        id: createdUser?.id || 'admin-' + Date.now(),
-        name: cleanName,
-        email: cleanEmail,
-        role: 'admin',
-        created_at: new Date().toISOString()
-      }, { onConflict: 'email' });
-    } catch (err) {
-      console.warn('Admins table direct upsert skipped:', err);
-    }
-
-    const verifiedAdmin: AdminUser = {
-      id: createdUser?.id || 'admin-' + Date.now(),
-      name: cleanName,
-      email: cleanEmail,
-      role: 'admin',
-      created_at: new Date().toISOString()
-    };
-
-    try {
-      localStorage.setItem('legit_admin_user', JSON.stringify(verifiedAdmin));
-    } catch {}
-
-    const needsEmailConfirmation = Boolean(
-      createdUser && 
-      !createdUser.confirmed_at && 
-      !createdUser.email_confirmed_at && 
-      !authSession
-    );
-
-    return { 
-      user: verifiedAdmin, 
-      session: authSession, 
-      error: null, 
-      needsEmailConfirmation 
-    };
-  } catch (err: any) {
-    return { user: null, error: err.message || 'An unexpected registration error occurred.' };
-  }
+export async function adminSignUp(
+  _name: string, 
+  _email: string, 
+  _password: string
+): Promise<{ user: any; session?: any; error: string | null; needsEmailConfirmation?: boolean }> {
+  return { 
+    user: null, 
+    error: 'Administrator registration is disabled. Only authorized administrators may sign in.' 
+  };
 }
 
 /**
- * Sign in existing Admin using Supabase Auth with Email and Password.
- * 1. Calls supabase.auth.signInWithPassword.
+ * Sign in existing Admin using authenticated credentials.
+ * 1. Authenticates against the secure cloud database.
  * 2. Verifies the user exists in the custom `admins` table.
  * 3. Returns the confirmed Admin profile or an authorization error.
  */
@@ -192,18 +119,13 @@ export async function adminSignIn(
   const cleanEmail = email.trim().toLowerCase();
 
   try {
-    // Step 1: Authenticate with Supabase Auth
+    // Step 1: Authenticate with password
     const { data, error: authError } = await supabase.auth.signInWithPassword({
       email: cleanEmail,
       password
     });
 
     if (authError) {
-      console.error('Supabase auth.signInWithPassword Error:', {
-        message: authError.message,
-        status: (authError as any).status
-      });
-
       const msg = authError.message.toLowerCase();
 
       // Check if user is already a confirmed administrator in custom `admins` table
@@ -232,7 +154,7 @@ export async function adminSignIn(
           return {
             session: null,
             user: null,
-            error: 'Invalid password. If you have not created your password yet in Supabase Auth, please click the "Admin Register" tab to register.',
+            error: 'Invalid administrator email or password. Please verify your credentials and try again.',
             errorCode: 'INVALID_CREDENTIALS'
           };
         }
@@ -246,11 +168,16 @@ export async function adminSignIn(
       } else if (msg.includes('invalid login credentials') || msg.includes('invalid credentials') || msg.includes('user not found')) {
         code = 'INVALID_CREDENTIALS';
       }
-      return { session: null, user: null, error: authError.message, errorCode: code };
+      return { 
+        session: null, 
+        user: null, 
+        error: 'Invalid administrator email or password. Access denied.', 
+        errorCode: code 
+      };
     }
 
     if (!data.session || !data.user) {
-      return { session: null, user: null, error: 'No active session returned from Supabase Auth.', errorCode: 'NO_SESSION' };
+      return { session: null, user: null, error: 'No active session returned. Please try again.', errorCode: 'NO_SESSION' };
     }
 
     // Step 2: Verify that this user exists in the custom `admins` table
