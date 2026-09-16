@@ -202,6 +202,8 @@ CREATE TABLE IF NOT EXISTS public.properties (
   payment_plan JSONB,
   completion_date TEXT,
   virtual_tour_url TEXT,
+  property_video TEXT,
+  property_availability TEXT DEFAULT 'available',
   date_added DATE DEFAULT CURRENT_DATE,
   verification_notes TEXT
 );
@@ -646,9 +648,20 @@ CREATE POLICY "Admins can view leads" ON public.property_leads FOR SELECT USING 
                               ₦{prop.priceNgn.toLocaleString()}
                             </td>
                             <td className="py-3">
-                              <span className="px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-semibold">
-                                {prop.titleStatus}
-                              </span>
+                              <div className="flex flex-col items-start gap-1">
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-semibold">
+                                  {prop.titleStatus}
+                                </span>
+                                {prop.property_availability === 'sold' ? (
+                                  <span className="px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-800 text-[9px] font-bold uppercase">
+                                    Sold
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-0.5 rounded-full bg-emerald-950/60 text-emerald-300 border border-emerald-900/60 text-[9px] font-bold uppercase">
+                                    Available
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="py-3 text-right">
                               <div className="flex items-center justify-end gap-1.5">
@@ -730,9 +743,25 @@ CREATE POLICY "Admins can view leads" ON public.property_leads FOR SELECT USING 
                             <Building2 className="w-8 h-8" />
                           </div>
                         )}
-                        <span className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-slate-900/90 backdrop-blur-xs text-emerald-400 text-[10px] font-bold">
-                          {prop.titleStatus}
-                        </span>
+                        <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap max-w-[80%]">
+                          <span className="px-2.5 py-1 rounded-full bg-slate-900/90 backdrop-blur-xs text-emerald-400 text-[10px] font-bold">
+                            {prop.titleStatus}
+                          </span>
+                          {prop.property_availability === 'sold' ? (
+                            <span className="px-2 py-0.5 rounded-full bg-amber-500/90 backdrop-blur-xs text-amber-950 text-[9px] font-extrabold uppercase">
+                              Sold
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-600/80 backdrop-blur-xs text-white text-[9px] font-bold uppercase">
+                              Available
+                            </span>
+                          )}
+                          {(prop.property_video || prop.virtualTourUrl) && (
+                            <span className="px-2 py-0.5 rounded-full bg-red-600/90 backdrop-blur-xs text-white text-[9px] font-bold">
+                              Video
+                            </span>
+                          )}
+                        </div>
                         <span className="absolute bottom-2.5 right-2.5 px-2.5 py-1 rounded-xl bg-slate-900/90 backdrop-blur-xs text-white text-xs font-extrabold">
                           ₦{prop.priceNgn.toLocaleString()}
                         </span>

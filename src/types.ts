@@ -57,6 +57,8 @@ export interface Property {
   property_image?: string;
   gallery_images?: string[];
   property_type?: string;
+  property_video?: string;
+  property_availability?: 'available' | 'sold';
 }
 
 export interface FilterOptions {

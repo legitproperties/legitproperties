@@ -14,7 +14,9 @@ import {
   Bath,
   Maximize2,
   Check,
-  Award
+  Award,
+  Play,
+  Video
 } from 'lucide-react';
 
 interface PropertyDetailModalProps {
@@ -68,8 +70,19 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-[10px] uppercase font-extrabold text-emerald-400 tracking-wider">
-                Audited Title Ref: {property.verificationDocNo || 'LAG/TIT/VERIFIED'}
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase font-extrabold text-emerald-400 tracking-wider">
+                  Audited Title Ref: {property.verificationDocNo || 'LAG/TIT/VERIFIED'}
+                </span>
+                {property.property_availability === 'sold' ? (
+                  <span className="px-2 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-bold uppercase tracking-wider">
+                    Sold
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] font-bold uppercase tracking-wider">
+                    Available
+                  </span>
+                )}
               </div>
               <h3 className="text-sm sm:text-base font-black truncate max-w-md sm:max-w-xl">
                 {property.title}
@@ -153,7 +166,18 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              {(property.property_video || property.virtualTourUrl) && (
+                <a
+                  href={property.property_video || property.virtualTourUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 sm:flex-initial px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <span>Watch Video Tour</span>
+                </a>
+              )}
               <a
                 href={whatsappUrl}
                 target="_blank"
@@ -226,6 +250,12 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                 <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Property Specifications</h4>
                 
                 <div className="space-y-2 text-xs text-slate-700 font-semibold">
+                  <div className="flex justify-between py-1 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-medium">Availability</span>
+                    <span className={`font-bold uppercase ${property.property_availability === 'sold' ? 'text-amber-600' : 'text-emerald-700'}`}>
+                      {property.property_availability === 'sold' ? 'Sold Out' : 'Available'}
+                    </span>
+                  </div>
                   <div className="flex justify-between py-1 border-b border-slate-200/60">
                     <span className="text-slate-500 font-medium">Property Type</span>
                     <span className="font-bold uppercase text-slate-900">{property.type}</span>

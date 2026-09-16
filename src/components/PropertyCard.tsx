@@ -42,6 +42,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           <span>{property.titleStatus}</span>
         </div>
 
+        {/* Sold Badge */}
+        {property.property_availability === 'sold' && (
+          <div className="absolute top-11 left-3 px-2.5 py-0.5 rounded-full bg-red-600/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider shadow-md">
+            Sold Out
+          </div>
+        )}
+
         {/* Bookmark Action */}
         <button
           onClick={(e) => {
@@ -71,11 +78,18 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         </div>
 
         {/* Image count indicator if multiple */}
-        {property.images.length > 1 && (
-          <div className="absolute bottom-3 right-3 text-white text-[10px] font-bold bg-black/60 border border-white/10 px-2 py-0.5 rounded-md backdrop-blur-xs">
-            1/{property.images.length} Photos
-          </div>
-        )}
+        <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+          {(property.property_video || property.virtualTourUrl) && (
+            <div className="text-white text-[10px] font-bold bg-red-600/90 border border-white/10 px-2 py-0.5 rounded-md backdrop-blur-xs">
+              Video
+            </div>
+          )}
+          {property.images.length > 1 && (
+            <div className="text-white text-[10px] font-bold bg-black/60 border border-white/10 px-2 py-0.5 rounded-md backdrop-blur-xs">
+              1/{property.images.length}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Card Content Body */}

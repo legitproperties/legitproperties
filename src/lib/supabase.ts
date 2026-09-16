@@ -562,7 +562,9 @@ export async function fetchPropertiesFromSupabase(): Promise<Property[]> {
         nearbyLandmarks: Array.isArray(item.nearby_landmarks) ? item.nearby_landmarks : (item.nearbyLandmarks || ['Close to Express Road', 'Prime Commercial Hub']),
         paymentPlan: typeof item.payment_plan === 'string' ? JSON.parse(item.payment_plan) : (item.paymentPlan || { available: true, minDownpaymentPercent: 20, maxTenorMonths: 12 }),
         completionDate: item.completion_date ?? item.completionDate,
-        virtualTourUrl: item.virtual_tour_url ?? item.virtualTourUrl,
+        virtualTourUrl: item.property_video || item.virtual_tour_url || item.virtualTourUrl,
+        property_video: item.property_video || item.virtual_tour_url || item.virtualTourUrl,
+        property_availability: (item.property_availability === 'sold' ? 'sold' : 'available') as 'available' | 'sold',
         dateAdded: item.date_added ?? item.created_at ?? item.dateAdded ?? new Date().toISOString().split('T')[0],
         verificationNotes: item.verification_notes ?? item.verificationNotes ?? '100% Certified Title Search at Lands Registry',
         whatsappNumber: item.whatsapp_number,
@@ -696,8 +698,12 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
     const propertyType = property.property_type || property.type || 'land';
     const whatsappNum = property.whatsappNumber || (property as any).whatsapp_number || '+2348030000000';
     const callNum = property.callNumber || (property as any).call_number || '+2348030000000';
+    const propertyVideo = (property.property_video || property.virtualTourUrl || '').trim() || null;
+    const rawAvailability = property.property_availability || (property as any).availability || 'available';
+    const propertyAvailability = rawAvailability === 'sold' ? 'sold' : 'available';
 
-    // Exact database payload matching the table schema (NO `amenities` or other unmapped columns)
+    // Exact database payload matching the table schema:
+    // (id, title, description, price, location, property_type, whatsapp_number, call_number, property_image, gallery_images, property_video, property_availability)
     const dbPayload: Record<string, any> = {
       title: safeTitle,
       description: safeDescription,
@@ -707,7 +713,9 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
       whatsapp_number: whatsappNum,
       call_number: callNum,
       property_image: mainImage,
-      gallery_images: galleryImages
+      gallery_images: galleryImages,
+      property_video: propertyVideo,
+      property_availability: propertyAvailability
     };
 
     if (property.id && !property.id.startsWith('temp-')) {

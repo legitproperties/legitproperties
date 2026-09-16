@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ShieldCheck, Plus, Trash2, MapPin, DollarSign, Image as ImageIcon, Save, AlertCircle, Copy, Check } from 'lucide-react';
+import { X, ShieldCheck, Plus, Trash2, MapPin, DollarSign, Image as ImageIcon, Save, AlertCircle, Copy, Check, Video } from 'lucide-react';
 import { Property, PropertyType, TitleStatus } from '../../types';
 
 interface PropertyFormModalProps {
@@ -22,6 +22,9 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   const [type, setType] = useState<PropertyType>(propertyToEdit?.type || 'land');
   const [category, setCategory] = useState<Property['category']>(propertyToEdit?.category || 'prime_land');
   const [purpose, setPurpose] = useState<Property['purpose']>(propertyToEdit?.purpose || 'Personal Home');
+  const [propertyAvailability, setPropertyAvailability] = useState<'available' | 'sold'>(
+    propertyToEdit?.property_availability === 'sold' ? 'sold' : 'available'
+  );
   
   const [address, setAddress] = useState(propertyToEdit?.location.address || '');
   const [neighborhood, setNeighborhood] = useState(propertyToEdit?.location.neighborhood || '');
@@ -51,6 +54,10 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   const [whatsappNumber, setWhatsappNumber] = useState(propertyToEdit?.whatsappNumber || '+2348030000000');
   const [callNumber, setCallNumber] = useState(propertyToEdit?.callNumber || '+2348030000000');
   
+  const [propertyVideo, setPropertyVideo] = useState(
+    propertyToEdit?.property_video || propertyToEdit?.virtualTourUrl || ''
+  );
+
   const [images, setImages] = useState<string[]>(
     propertyToEdit?.images && propertyToEdit.images.length > 0
       ? propertyToEdit.images
@@ -157,7 +164,10 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       dateAdded: propertyToEdit?.dateAdded || new Date().toISOString().split('T')[0],
       verificationNotes: '100% Certified Title Search at Lands Registry',
       whatsappNumber: whatsappNumber.trim() || '+2348030000000',
-      callNumber: callNumber.trim() || '+2348030000000'
+      callNumber: callNumber.trim() || '+2348030000000',
+      property_video: propertyVideo.trim() || undefined,
+      property_availability: propertyAvailability,
+      virtualTourUrl: propertyVideo.trim() || undefined
     };
 
     const res = await onSave(payload);
@@ -249,11 +259,11 @@ WITH CHECK (true);`}
           {/* Section 1: Basic Information */}
           <div className="space-y-4">
             <h4 className="font-bold text-[#102033] text-xs uppercase tracking-wider border-b pb-1">
-              1. Title & Classification
+              1. Title, Classification & Availability
             </h4>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="sm:col-span-2 lg:col-span-3">
                 <label className="block font-semibold text-slate-700 mb-1">
                   Property Title *
                 </label>
@@ -296,6 +306,20 @@ WITH CHECK (true);`}
                   <option value="executive_duplex">Executive Duplexes & Villas</option>
                   <option value="diaspora_choice">Diaspora Choice</option>
                   <option value="newly_listed">Newly Listed Deal</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Property Availability *
+                </label>
+                <select
+                  value={propertyAvailability}
+                  onChange={(e) => setPropertyAvailability(e.target.value as 'available' | 'sold')}
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900 bg-white font-medium"
+                >
+                  <option value="available">🟢 available (Active & In Market)</option>
+                  <option value="sold">🔴 sold (Closed / Off Market)</option>
                 </select>
               </div>
             </div>
@@ -422,26 +446,52 @@ WITH CHECK (true);`}
           </div>
 
           {/* Section 4: Images & Media */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             <h4 className="font-bold text-[#102033] text-xs uppercase tracking-wider border-b pb-1">
-              4. Property Photos (Image URLs)
+              4. Property Media: Video Link & Photos
             </h4>
 
-            <div className="flex gap-2">
+            {/* Property Video Input */}
+            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-1.5">
+              <label className="block font-semibold text-slate-700 text-xs flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Video className="w-4 h-4 text-emerald-700" />
+                  <span>Property Video Link (`property_video`)</span>
+                </span>
+                <span className="text-[11px] text-slate-400 font-normal">Optional (YouTube / Vimeo)</span>
+              </label>
               <input
                 type="url"
-                value={newImageUrl}
-                onChange={(e) => setNewImageUrl(e.target.value)}
-                placeholder="Paste high-res image URL (e.g. https://images.unsplash.com/...)"
-                className="flex-1 px-3.5 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900 text-xs"
+                value={propertyVideo}
+                onChange={(e) => setPropertyVideo(e.target.value)}
+                placeholder="e.g. https://www.youtube.com/watch?v=... or https://vimeo.com/..."
+                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900 text-xs sm:text-sm bg-white"
               />
-              <button
-                type="button"
-                onClick={handleAddImage}
-                className="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold text-xs hover:bg-slate-700 cursor-pointer"
-              >
-                Add Image
-              </button>
+              <p className="text-[11px] text-slate-500">
+                Direct walkthrough link for verified buyers and overseas diaspora inquiries.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block font-semibold text-slate-700 text-xs">
+                Property Photos (Image URLs)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={newImageUrl}
+                  onChange={(e) => setNewImageUrl(e.target.value)}
+                  placeholder="Paste high-res image URL (e.g. https://images.unsplash.com/...)"
+                  className="flex-1 px-3.5 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900 text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddImage}
+                  className="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold text-xs hover:bg-slate-700 cursor-pointer"
+                >
+                  Add Image
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
