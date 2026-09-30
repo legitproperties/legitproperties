@@ -27,10 +27,11 @@ import {
   Phone,
   Mail,
   MapPin,
-  Sparkles
+  Sparkles,
+  Calendar
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
-import { Property, BlogPost, PropertyRequestLead } from '../../types';
+import { Property, BlogPost, PropertyRequestLead, BookingRequest } from '../../types';
 import {
   fetchPropertiesFromSupabase,
   savePropertyToSupabase,
@@ -39,16 +40,19 @@ import {
   saveBlogPostToSupabase,
   deleteBlogPostFromSupabase,
   fetchLeadsFromSupabase,
+  fetchBookingsFromSupabase,
   fetchAdminDashboardStats
 } from '../../lib/supabase';
 import { PropertyFormModal } from './PropertyFormModal';
 import { BlogPostFormModal } from './BlogPostFormModal';
+import { BookingsTracker } from './BookingsTracker';
+import { WordPressClassicEditor } from './WordPressClassicEditor';
 
 interface AdminDashboardProps {
   onGoToPublicSite: () => void;
 }
 
-type TabType = 'overview' | 'properties' | 'blog' | 'leads' | 'database';
+type TabType = 'overview' | 'properties' | 'bookings' | 'blog' | 'leads' | 'database';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoToPublicSite }) => {
   const { admin, signOut, isConfigured } = useAdminAuth();
@@ -60,6 +64,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoToPublicSite
   // Stats & Data State
   const [stats, setStats] = useState({
     totalProperties: 0,
+    totalBookings: 0,
     totalBlogPosts: 0,
     totalLeads: 0,
     totalTitleAudits: 0,
@@ -77,6 +82,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoToPublicSite
 
   const [isBlogModalOpen, setIsBlogModalOpen] = useState(false);
   const [blogToEdit, setBlogToEdit] = useState<BlogPost | null>(null);
+  const [isClassicWpEditorOpen, setIsClassicWpEditorOpen] = useState(false);
 
   // Search filters inside admin tabs
   const [propertySearchQuery, setPropertySearchQuery] = useState('');
@@ -89,15 +95,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoToPublicSite
   const loadAllData = async () => {
     setIsLoadingData(true);
     try {
-      const [fetchedStats, fetchedProps, fetchedBlogs, fetchedLeads] = await Promise.all([
+      const [fetchedStats, fetchedProps, fetchedBlogs, fetchedLeads, fetchedBookings] = await Promise.all([
         fetchAdminDashboardStats(),
         fetchPropertiesFromSupabase(),
         fetchBlogPostsFromSupabase(),
-        fetchLeadsFromSupabase()
+        fetchLeadsFromSupabase(),
+        fetchBookingsFromSupabase()
       ]);
 
       setStats({
         totalProperties: fetchedProps.length,
+        totalBookings: fetchedBookings.length,
         totalBlogPosts: fetchedBlogs.length,
         totalLeads: fetchedLeads.length,
         totalTitleAudits: fetchedStats.totalTitleAudits,
@@ -251,6 +259,30 @@ CREATE TABLE IF NOT EXISTS public.property_leads (
 ALTER TABLE public.property_leads ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public can insert leads" ON public.property_leads FOR INSERT WITH CHECK (true);
 CREATE POLICY "Admins can view leads" ON public.property_leads FOR SELECT USING (auth.role() = 'authenticated');
+
+-- 5. Short-Stay Bookings Table Schema
+CREATE TABLE IF NOT EXISTS public.bookings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  property_id TEXT,
+  property_title TEXT NOT NULL,
+  property_location TEXT,
+  guest_name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT NOT NULL,
+  check_in DATE NOT NULL,
+  check_out DATE NOT NULL,
+  nights INTEGER DEFAULT 1,
+  guests_count INTEGER DEFAULT 1,
+  price_per_night_ngn NUMERIC,
+  total_amount_ngn NUMERIC NOT NULL,
+  status TEXT DEFAULT 'pending',
+  special_requests TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public can insert bookings" ON public.bookings FOR INSERT WITH CHECK (true);
+CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL USING (auth.role() = 'authenticated');
 `;
 
   const copySqlToClipboard = () => {
@@ -262,7 +294,8 @@ CREATE POLICY "Admins can view leads" ON public.property_leads FOR SELECT USING 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard, badge: null },
     { id: 'properties', label: 'Manage Properties', icon: Building2, badge: stats.totalProperties },
-    { id: 'blog', label: 'Blog & Articles', icon: FileText, badge: stats.totalBlogPosts },
+    { id: 'bookings', label: 'Bookings Tracker', icon: Calendar, badge: stats.totalBookings },
+    { id: 'blog', label: 'WordPress Blog Editor', icon: FileText, badge: stats.totalBlogPosts },
     { id: 'leads', label: 'Buyer Requests', icon: Users, badge: stats.totalLeads },
     { id: 'database', label: 'Database & SQL', icon: Database, badge: null }
   ];
@@ -504,7 +537,7 @@ CREATE POLICY "Admins can view leads" ON public.property_leads FOR SELECT USING 
                 </div>
               </div>
 
-              {/* 4 Summary Stats Cards */}
+              {/* 5 Summary Stats Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 
                 <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md">
@@ -515,28 +548,48 @@ CREATE POLICY "Admins can view leads" ON public.property_leads FOR SELECT USING 
                     </div>
                   </div>
                   <div className="mt-3 flex items-baseline gap-2">
-                    <span className="text-3xl font-extrabold text-white">{stats.totalProperties}</span>
+                    <span className="text-3xl font-extrabold text-white font-mono">{stats.totalProperties}</span>
                     <span className="text-[11px] text-emerald-400 font-medium">Cloud Synced</span>
                   </div>
                   <button
                     onClick={() => setActiveTab('properties')}
                     className="mt-3 text-[11px] font-bold text-slate-300 hover:text-white flex items-center gap-1 cursor-pointer"
                   >
-                    <span>View all listings</span>
+                    <span>View inventory</span>
                     <ChevronRight className="w-3 h-3" />
                   </button>
                 </div>
 
                 <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-400">Published Articles</span>
+                    <span className="text-xs font-semibold text-slate-400">Short-Stay Bookings</span>
+                    <div className="p-2 rounded-xl bg-emerald-950 text-emerald-400 border border-emerald-800">
+                      <Calendar className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-baseline gap-2">
+                    <span className="text-3xl font-extrabold text-emerald-400 font-mono">{stats.totalBookings}</span>
+                    <span className="text-[11px] text-emerald-300 font-medium">Live Requests</span>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('bookings')}
+                    className="mt-3 text-[11px] font-bold text-slate-300 hover:text-white flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Track reservations</span>
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-400">WordPress SEO Articles</span>
                     <div className="p-2 rounded-xl bg-blue-950 text-blue-400 border border-blue-800">
                       <FileText className="w-4 h-4" />
                     </div>
                   </div>
                   <div className="mt-3 flex items-baseline gap-2">
-                    <span className="text-3xl font-extrabold text-white">{stats.totalBlogPosts}</span>
-                    <span className="text-[11px] text-blue-400 font-medium">CMS Active</span>
+                    <span className="text-3xl font-extrabold text-white font-mono">{stats.totalBlogPosts}</span>
+                    <span className="text-[11px] text-blue-400 font-medium">WP Editor</span>
                   </div>
                   <button
                     onClick={() => setActiveTab('blog')}
@@ -555,34 +608,14 @@ CREATE POLICY "Admins can view leads" ON public.property_leads FOR SELECT USING 
                     </div>
                   </div>
                   <div className="mt-3 flex items-baseline gap-2">
-                    <span className="text-3xl font-extrabold text-white">{stats.totalLeads}</span>
-                    <span className="text-[11px] text-purple-400 font-medium">Direct Leads</span>
+                    <span className="text-3xl font-extrabold text-white font-mono">{stats.totalLeads}</span>
+                    <span className="text-[11px] text-purple-400 font-medium">Direct Inquiries</span>
                   </div>
                   <button
                     onClick={() => setActiveTab('leads')}
                     className="mt-3 text-[11px] font-bold text-slate-300 hover:text-white flex items-center gap-1 cursor-pointer"
                   >
                     <span>Review inquiries</span>
-                    <ChevronRight className="w-3 h-3" />
-                  </button>
-                </div>
-
-                <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-md">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-400">Database Engine</span>
-                    <div className="p-2 rounded-xl bg-emerald-950 text-emerald-400 border border-emerald-800">
-                      <Database className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-baseline gap-2">
-                    <span className="text-lg font-bold text-white">PostgreSQL</span>
-                    <span className="text-[11px] text-emerald-400 font-medium">Cloud Database</span>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab('database')}
-                    className="mt-3 text-[11px] font-bold text-slate-300 hover:text-white flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>View SQL schema</span>
                     <ChevronRight className="w-3 h-3" />
                   </button>
                 </div>
@@ -816,13 +849,21 @@ CREATE POLICY "Admins can view leads" ON public.property_leads FOR SELECT USING 
             </div>
           )}
 
-          {/* TAB 3: BLOG & ARTICLES */}
+          {/* TAB 3: BOOKINGS TRACKER */}
+          {activeTab === 'bookings' && (
+            <BookingsTracker />
+          )}
+
+          {/* TAB 4: BLOG & ARTICLES (WORDPRESS EDITOR) */}
           {activeTab === 'blog' && (
             <div className="space-y-6 max-w-7xl mx-auto animate-fadeIn">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-extrabold text-white">Blog & Editorial CMS</h2>
-                  <p className="text-xs text-slate-400">Publish property verification guides, C of O advice, and market trends</p>
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2">
+                    <FileText className="w-6 h-6 text-blue-400" />
+                    <span>WordPress Classic Content CMS</span>
+                  </h2>
+                  <p className="text-xs text-slate-400">Publish high-ranking local SEO content, C of O verification guides, and shortlet investor insights</p>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -840,12 +881,12 @@ CREATE POLICY "Admins can view leads" ON public.property_leads FOR SELECT USING 
                   <button
                     onClick={() => {
                       setBlogToEdit(null);
-                      setIsBlogModalOpen(true);
+                      setIsClassicWpEditorOpen(true);
                     }}
-                    className="px-4 py-2 bg-[#167A5A] hover:bg-[#13684d] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md cursor-pointer shrink-0"
+                    className="px-4 py-2 bg-[#007cba] hover:bg-[#006ba1] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md cursor-pointer shrink-0"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>New Article</span>
+                    <span>Open WordPress Editor</span>
                   </button>
                 </div>
               </div>
@@ -880,11 +921,11 @@ CREATE POLICY "Admins can view leads" ON public.property_leads FOR SELECT USING 
                         <button
                           onClick={() => {
                             setBlogToEdit(post);
-                            setIsBlogModalOpen(true);
+                            setIsClassicWpEditorOpen(true);
                           }}
                           className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold cursor-pointer"
                         >
-                          Edit
+                          Edit in WP
                         </button>
                         <button
                           onClick={() => handleDeleteBlog(post.id)}
@@ -1046,6 +1087,22 @@ CREATE POLICY "Admins can view leads" ON public.property_leads FOR SELECT USING 
         onSave={handleSaveBlog}
         postToEdit={blogToEdit}
       />
+
+      {/* WordPress Classic Editor Modal */}
+      {isClassicWpEditorOpen && (
+        <WordPressClassicEditor
+          postToEdit={blogToEdit}
+          onSave={async (postData) => {
+            const res = await handleSaveBlog(postData);
+            await loadAllData();
+            return res;
+          }}
+          onClose={() => {
+            setIsClassicWpEditorOpen(false);
+            setBlogToEdit(null);
+          }}
+        />
+      )}
 
     </div>
   );

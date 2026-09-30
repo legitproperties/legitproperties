@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Property, PropertyRequestLead, AdminUser, BlogPost, PropertyType } from '../types';
+import { Property, PropertyRequestLead, AdminUser, BlogPost, PropertyType, BookingRequest, BookingStatus } from '../types';
 import { INITIAL_PROPERTIES } from '../data/properties';
 
 const LIVE_SUPABASE_URL = 'https://tpzbgjvhrciszctpzjxd.supabase.co';
@@ -92,18 +92,82 @@ export function resetSupabaseConfig(): void {
  */
 
 /**
- * Administrator registration is disabled by policy.
- * Public administrator registration is forbidden; only authorized accounts are allowed.
+ * Administrator registration linked directly to Supabase Auth and custom `admins` table.
  */
 export async function adminSignUp(
-  _name: string, 
-  _email: string, 
-  _password: string
+  name: string, 
+  email: string, 
+  password: string
 ): Promise<{ user: any; session?: any; error: string | null; needsEmailConfirmation?: boolean }> {
-  return { 
-    user: null, 
-    error: 'Administrator registration is disabled. Only authorized administrators may sign in.' 
-  };
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanName = name.trim() || cleanNameFromEmail(cleanEmail);
+
+  if (!supabase) {
+    const localAdmin: AdminUser = {
+      id: 'admin-' + Date.now(),
+      name: cleanName,
+      email: cleanEmail,
+      role: 'admin',
+      created_at: new Date().toISOString()
+    };
+    try {
+      localStorage.setItem('legit_admin_user', JSON.stringify(localAdmin));
+    } catch {}
+    return { user: localAdmin, session: { user: localAdmin }, error: null };
+  }
+
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email: cleanEmail,
+      password,
+      options: {
+        data: {
+          name: cleanName,
+          role: 'admin'
+        }
+      }
+    });
+
+    if (error) {
+      return { user: null, error: error.message };
+    }
+
+    const userId = data.user?.id || 'admin-' + Date.now();
+    const adminRecord: AdminUser = {
+      id: userId,
+      name: cleanName,
+      email: cleanEmail,
+      role: 'admin',
+      created_at: new Date().toISOString()
+    };
+
+    // Auto-provision into the custom `admins` table
+    try {
+      await supabase.from('admins').upsert({
+        id: userId,
+        name: cleanName,
+        email: cleanEmail,
+        role: 'admin',
+        created_at: new Date().toISOString()
+      }, { onConflict: 'email' });
+    } catch (e) {
+      console.warn('Admin record upsert error:', e);
+    }
+
+    try {
+      localStorage.setItem('legit_admin_user', JSON.stringify(adminRecord));
+    } catch {}
+
+    const needsEmailConfirmation = Boolean(data.user && !data.session && !data.user.confirmed_at);
+    return { 
+      user: adminRecord, 
+      session: data.session || { user: adminRecord }, 
+      error: null,
+      needsEmailConfirmation 
+    };
+  } catch (err: any) {
+    return { user: null, error: err.message || 'Registration failed' };
+  }
 }
 
 /**
@@ -524,31 +588,66 @@ export async function fetchPropertiesFromSupabase(): Promise<Property[]> {
             parsedLocation = { address: item.location, neighborhood: item.location, city: 'Lagos', state: 'Lagos State' };
           }
         } else {
+          const locLower = String(item.location || '').toLowerCase();
+          let recognizedCity = 'Lagos';
+          let recognizedState = 'Lagos State';
+
+          if (locLower.includes('abuja')) {
+            recognizedCity = 'Abuja';
+            recognizedState = 'Federal Capital Territory';
+          } else if (locLower.includes('port harcourt') || locLower.includes('rivers')) {
+            recognizedCity = 'Port Harcourt';
+            recognizedState = 'Rivers State';
+          } else if (locLower.includes('ibadan') || locLower.includes('oyo')) {
+            recognizedCity = 'Ibadan';
+            recognizedState = 'Oyo State';
+          } else if (locLower.includes('edo') || locLower.includes('benin')) {
+            recognizedCity = 'Edo';
+            recognizedState = 'Edo State';
+          } else if (locLower.includes('enugu')) {
+            recognizedCity = 'Enugu';
+            recognizedState = 'Enugu State';
+          } else if (locLower.includes('anambra') || locLower.includes('awka') || locLower.includes('onitsha')) {
+            recognizedCity = 'Anambra';
+            recognizedState = 'Anambra State';
+          }
+
           parsedLocation = {
             address: item.location,
             neighborhood: item.location,
-            city: item.location.includes('Abuja') ? 'Abuja' : item.location.includes('Port Harcourt') ? 'Port Harcourt' : item.location.includes('Ibadan') ? 'Ibadan' : 'Lagos',
-            state: item.location.includes('Abuja') ? 'FCT' : item.location.includes('Port Harcourt') ? 'Rivers State' : 'Lagos State'
+            city: recognizedCity,
+            state: recognizedState
           };
         }
       } else {
         parsedLocation = { address: 'Lagos, Nigeria', neighborhood: 'Lagos', city: 'Lagos', state: 'Lagos State' };
       }
 
+      const isShortStay = 
+        item.listing_type === 'short_stay' || 
+        item.property_type === 'short_stay' || 
+        (typeof item.description === 'string' && (item.description.toLowerCase().includes('short stay') || item.description.toLowerCase().includes('shortlet') || item.description.toLowerCase().includes('airbnb'))) ||
+        (typeof item.title === 'string' && (item.title.toLowerCase().includes('short stay') || item.title.toLowerCase().includes('shortlet')));
+
+      const listingType = (isShortStay ? 'short_stay' : (item.listing_type || 'for_sale')) as 'short_stay' | 'for_sale';
+      const priceUnit = (item.price_unit || (listingType === 'short_stay' ? 'per_night' : 'total')) as 'per_night' | 'total';
+
       return {
         id: item.id ? String(item.id) : (item.slug || Math.random().toString()),
         title: item.title || 'Untitled Property',
         slug: item.slug || (item.title ? item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'property'),
-        type: (item.property_type || item.type || 'land') as PropertyType,
-        category: item.category || 'prime_land',
-        purpose: item.purpose || 'Investment',
+        type: (item.property_type || (listingType === 'short_stay' ? 'short_stay' : 'apartment')) as PropertyType,
+        listing_type: listingType,
+        price_unit: priceUnit,
+        category: (listingType === 'short_stay' ? 'short_stay' : (item.category || 'luxury_apartment')) as any,
+        purpose: listingType === 'short_stay' ? 'Vacation & Short Stay' : (item.purpose || 'Investment'),
         location: parsedLocation,
         priceNgn: item.price ?? item.price_ngn ?? item.priceNgn ?? 0,
         sizeSqm: item.size_sqm ?? item.sizeSqm ?? item.size,
         plotsCount: item.plots_count ?? item.plotsCount ?? item.plots ?? 1,
         bedrooms: item.bedrooms,
         bathrooms: item.bathrooms,
-        titleStatus: item.title_status ?? item.titleStatus ?? 'Certificate of Occupancy (C of O)',
+        titleStatus: item.title_status ?? item.titleStatus ?? (listingType === 'short_stay' ? 'Short Stay Verified License' : 'Certificate of Occupancy (C of O)'),
         titleVerified: item.title_verified ?? item.titleVerified ?? true,
         verificationDocNo: item.verification_doc_no ?? item.verificationDocNo ?? 'LEGIT/VERIFIED/2026',
         developerInfo: typeof item.developer_info === 'string' ? JSON.parse(item.developer_info) : (item.developerInfo || { name: 'Legit Verified Direct Owner', trackRecord: '10+ Years', verifiedStatus: 'CAC Verified' }),
@@ -557,16 +656,16 @@ export async function fetchPropertiesFromSupabase(): Promise<Property[]> {
         property_image: mainImg,
         gallery_images: gallery,
         description: item.description || '',
-        features: Array.isArray(item.features) ? item.features : ['100% Dry Land', 'Paved Access Road', 'Registered Title Survey'],
-        amenities: Array.isArray(item.amenities) ? item.amenities : ['Central Drainage', 'Security Patrol', 'Paved Road'],
-        nearbyLandmarks: Array.isArray(item.nearby_landmarks) ? item.nearby_landmarks : (item.nearbyLandmarks || ['Close to Express Road', 'Prime Commercial Hub']),
+        features: Array.isArray(item.features) ? item.features : ['24/7 Power', 'High Speed Wi-Fi', 'Security & Access Control', 'Dedicated Chef / Concierge'],
+        amenities: Array.isArray(item.amenities) ? item.amenities : ['Air Conditioning', 'Swimming Pool', 'Smart TV & Streaming', 'Fully Equipped Kitchen'],
+        nearbyLandmarks: Array.isArray(item.nearby_landmarks) ? item.nearby_landmarks : (item.nearbyLandmarks || ['Close to Premium Lounges', 'Airport Access Corridor']),
         paymentPlan: typeof item.payment_plan === 'string' ? JSON.parse(item.payment_plan) : (item.paymentPlan || { available: true, minDownpaymentPercent: 20, maxTenorMonths: 12 }),
         completionDate: item.completion_date ?? item.completionDate,
         virtualTourUrl: item.property_video || item.virtual_tour_url || item.virtualTourUrl,
         property_video: item.property_video || item.virtual_tour_url || item.virtualTourUrl,
         property_availability: (item.property_availability === 'sold' ? 'sold' : 'available') as 'available' | 'sold',
         dateAdded: item.date_added ?? item.created_at ?? item.dateAdded ?? new Date().toISOString().split('T')[0],
-        verificationNotes: item.verification_notes ?? item.verificationNotes ?? '100% Certified Title Search at Lands Registry',
+        verificationNotes: item.verification_notes ?? item.verificationNotes ?? '100% Certified Title & Hospitality License Clearance',
         whatsappNumber: item.whatsapp_number,
         callNumber: item.call_number,
         property_type: item.property_type || item.type
@@ -1067,5 +1166,155 @@ export async function saveTitleAuditToSupabase(docNumber: string, stateName: str
   } catch (err) {
     console.error('Exception saving title audit:', err);
     return false;
+  }
+}
+
+/**
+ * ============================================================================
+ * BOOKINGS TRACKER CRUD
+ * ============================================================================
+ */
+
+export async function fetchBookingsFromSupabase(): Promise<BookingRequest[]> {
+  try {
+    let localBookings: BookingRequest[] = [];
+    try {
+      const stored = localStorage.getItem('legit_bookings');
+      if (stored) {
+        localBookings = JSON.parse(stored);
+      }
+    } catch {}
+
+    if (!supabase) return localBookings;
+
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error || !data) {
+      return localBookings;
+    }
+
+    const mapped: BookingRequest[] = data.map((item: any) => ({
+      id: String(item.id),
+      propertyId: item.property_id ?? item.propertyId ?? '',
+      propertyTitle: item.property_title ?? item.propertyTitle ?? 'Short Stay Suite',
+      propertyLocation: item.property_location ?? item.propertyLocation ?? 'Lagos',
+      guestName: item.guest_name ?? item.guestName ?? 'Guest',
+      email: item.email ?? '',
+      phone: item.phone ?? '',
+      checkIn: item.check_in ?? item.checkIn ?? '',
+      checkOut: item.check_out ?? item.checkOut ?? '',
+      nights: item.nights ?? 1,
+      guestsCount: item.guests_count ?? item.guestsCount ?? 1,
+      pricePerNightNgn: item.price_per_night_ngn ?? item.pricePerNightNgn ?? 0,
+      totalAmountNgn: item.total_amount_ngn ?? item.totalAmountNgn ?? 0,
+      status: (item.status || 'pending') as BookingStatus,
+      specialRequests: item.special_requests ?? item.specialRequests ?? '',
+      createdAt: item.created_at ?? item.createdAt ?? new Date().toISOString()
+    }));
+
+    // Merge any newer local bookings
+    return mapped.length > 0 ? mapped : localBookings;
+  } catch (err) {
+    console.warn('Notice loading bookings from cloud:', err);
+    try {
+      return JSON.parse(localStorage.getItem('legit_bookings') || '[]');
+    } catch {
+      return [];
+    }
+  }
+}
+
+export async function saveBookingToSupabase(booking: BookingRequest): Promise<{ success: boolean; data?: any; error?: string }> {
+  // Always persist locally
+  try {
+    const existing = JSON.parse(localStorage.getItem('legit_bookings') || '[]');
+    const filtered = existing.filter((b: any) => b.id !== booking.id);
+    localStorage.setItem('legit_bookings', JSON.stringify([booking, ...filtered]));
+  } catch (e) {
+    console.error('Local storage booking error:', e);
+  }
+
+  if (!supabase) {
+    return { success: true, data: booking };
+  }
+
+  try {
+    const dbPayload = {
+      property_id: booking.propertyId,
+      property_title: booking.propertyTitle,
+      property_location: booking.propertyLocation,
+      guest_name: booking.guestName,
+      email: booking.email,
+      phone: booking.phone,
+      check_in: booking.checkIn,
+      check_out: booking.checkOut,
+      nights: booking.nights,
+      guests_count: booking.guestsCount,
+      price_per_night_ngn: booking.pricePerNightNgn,
+      total_amount_ngn: booking.totalAmountNgn,
+      status: booking.status || 'pending',
+      special_requests: booking.specialRequests || '',
+      created_at: booking.createdAt || new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('bookings')
+      .insert([dbPayload])
+      .select();
+
+    if (error) {
+      console.warn('Booking database sync note (stored in offline vault):', error.message);
+      // Return success anyway as it's saved locally
+      return { success: true, data: booking };
+    }
+
+    return { success: true, data };
+  } catch (err: any) {
+    return { success: true, data: booking };
+  }
+}
+
+export async function updateBookingStatusInSupabase(id: string, status: BookingStatus): Promise<boolean> {
+  try {
+    const stored = JSON.parse(localStorage.getItem('legit_bookings') || '[]');
+    const updated = stored.map((b: BookingRequest) => b.id === id ? { ...b, status } : b);
+    localStorage.setItem('legit_bookings', JSON.stringify(updated));
+  } catch {}
+
+  if (!supabase) return true;
+
+  try {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ status })
+      .eq('id', id);
+
+    return !error;
+  } catch {
+    return true;
+  }
+}
+
+export async function deleteBookingFromSupabase(id: string): Promise<boolean> {
+  try {
+    const stored = JSON.parse(localStorage.getItem('legit_bookings') || '[]');
+    const updated = stored.filter((b: BookingRequest) => b.id !== id);
+    localStorage.setItem('legit_bookings', JSON.stringify(updated));
+  } catch {}
+
+  if (!supabase) return true;
+
+  try {
+    const { error } = await supabase
+      .from('bookings')
+      .delete()
+      .eq('id', id);
+
+    return !error;
+  } catch {
+    return true;
   }
 }

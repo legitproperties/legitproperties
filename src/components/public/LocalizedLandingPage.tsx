@@ -1,0 +1,573 @@
+import React, { useRef, useMemo, useState } from 'react';
+import {
+  MapPin,
+  Phone,
+  MessageSquare,
+  Sparkles,
+  ShieldCheck,
+  Zap,
+  Wifi,
+  ChevronDown,
+  Building2,
+  Calendar,
+  Eye,
+  CheckCircle2,
+  ArrowRight,
+  Filter
+} from 'lucide-react';
+import { Property, SupportedCity, ListingType } from '../../types';
+
+interface LocalizedLandingPageProps {
+  currentCategory: 'short_stay' | 'for_sale';
+  currentCity: SupportedCity | 'all';
+  properties: Property[];
+  onSelectProperty: (property: Property) => void;
+  onOpenBookingModal: (property: Property) => void;
+  onNavigateCity: (city: SupportedCity | 'all', category: 'short_stay' | 'for_sale') => void;
+}
+
+interface LocationMeta {
+  title: string;
+  tagline: string;
+  keywords: string;
+  heroImage: string;
+  ctaText: string;
+  neighborhoods: string[];
+}
+
+const CITY_METADATA: Record<string, LocationMeta> = {
+  Lagos: {
+    title: 'Experience Luxury Short Stays in Lagos',
+    tagline: 'Hand-picked premium shortlets, waterfront penthouses, and serviced apartments in Ikoyi, Victoria Island & Lekki Phase 1.',
+    keywords: 'Lagos shortlet · Lagos short stay apartments · Lagos Airbnb · 24/7 Uninterrupted Light · Private Chef Available',
+    heroImage: '/src/assets/images/hero_shortstay_lagos_1790768196208.jpg',
+    ctaText: 'Explore Lagos Short Stays',
+    neighborhoods: ['Ikoyi', 'Victoria Island', 'Lekki Phase 1', 'Banana Island', 'Ikeja GRA', 'Eko Atlantic']
+  },
+  Abuja: {
+    title: 'Executive Short Stay Apartments in Abuja',
+    tagline: 'Diplomatic residences, skyline duplexes, and quiet luxury villas in Maitama, Asokoro, Guzape & Wuse 2.',
+    keywords: 'Abuja shortlet · Abuja short stay apartments · Abuja Airbnb · Diplomatic Security · High-Speed Fiber Internet',
+    heroImage: '/src/assets/images/hero_shortstay_abuja_1790768208820.jpg',
+    ctaText: 'Explore Abuja Short Stays',
+    neighborhoods: ['Maitama', 'Asokoro', 'Guzape', 'Wuse 2', 'Jabi Lake', 'Gwarinpa']
+  },
+  'Port Harcourt': {
+    title: 'Short Stay Apartments in Port Harcourt (Rivers State)',
+    tagline: 'Upscale corporate residences, garden city villas, and waterfront executive flats in Old GRA, Peter Odili & Trans-Amadi.',
+    keywords: 'Port Harcourt shortlet · Rivers State short stay apartments · PH Airbnb · 24/7 Power Security Escort Available',
+    heroImage: '/src/assets/images/hero_luxury_interior_1790768220829.jpg',
+    ctaText: 'Explore Port Harcourt Stays',
+    neighborhoods: ['Old GRA', 'Peter Odili Road', 'Trans-Amadi', 'Ada George', 'Woji', 'GRA Phase 2']
+  },
+  Ibadan: {
+    title: 'Short Stay Apartments in Ibadan',
+    tagline: 'Serene heritage penthouses and contemporary serviced suites in Bodija, Iyaganku GRA & Oluyole Estate.',
+    keywords: 'Ibadan shortlet · Ibadan short stay apartments · Ibadan Airbnb · Peaceful Ambience · Private Pool Suites',
+    heroImage: '/src/assets/images/hero_luxury_interior_1790768220829.jpg',
+    ctaText: 'Explore Ibadan Short Stays',
+    neighborhoods: ['Bodija', 'Iyaganku GRA', 'Oluyole Estate', 'Jericho', 'Alalubosa GRA', 'Ring Road']
+  },
+  Edo: {
+    title: 'Short Stay Apartments in Edo State',
+    tagline: 'Executive suites, royal diaspora villas, and furnished vacation homes across Benin City & surrounding prime axes.',
+    keywords: 'Benin City shortlet · Edo short stay apartments · Edo Airbnb · Gated Luxury · Event Concierge Ready',
+    heroImage: '/src/assets/images/hero_luxury_interior_1790768220829.jpg',
+    ctaText: 'Explore Edo Short Stays',
+    neighborhoods: ['GRA Benin City', 'Airport Road', 'Ugbor GRA', 'Boundary Road', 'Ihama Road', 'Sapele Road']
+  },
+  Enugu: {
+    title: 'Short Stay Apartments in Enugu',
+    tagline: 'Scenic coal-city hillside villas, golf course retreats, and serviced luxury apartments in Independence Layout & New Haven.',
+    keywords: 'Enugu shortlet · Enugu short stay apartments · Enugu Airbnb · Mountain Skyline Views · Executive Comfort',
+    heroImage: '/src/assets/images/hero_luxury_interior_1790768220829.jpg',
+    ctaText: 'Explore Enugu Short Stays',
+    neighborhoods: ['Independence Layout', 'New Haven', 'Golf Estate', 'GRA Enugu', 'Trans-Ekulu', 'Rikita']
+  },
+  Anambra: {
+    title: 'Short Stay Apartments in Anambra',
+    tagline: 'Ultra-modern serviced apartments, luxury commercial executive lodges in Awka Capital & Onitsha Commercial Hub.',
+    keywords: 'Awka shortlet · Onitsha short stay apartments · Anambra Airbnb · 24/7 Solar Backup · VIP Chauffeur on Request',
+    heroImage: '/src/assets/images/hero_luxury_interior_1790768220829.jpg',
+    ctaText: 'Explore Anambra Short Stays',
+    neighborhoods: ['Awka GRA', 'Nodu Okpuno', 'Onitsha GRA', 'Nnewi Executive Axis', 'Agu-Awka', 'Federal Housing']
+  },
+  for_sale_all: {
+    title: 'Verified Luxury Properties for Sale Across Nigeria',
+    tagline: 'Legally vetted lands with Certificate of Occupancy (C of O), Governor\'s Consent, and architectural mansions ready for title transfer.',
+    keywords: 'Nigeria properties for sale · Verified C of O land Lagos · Maitama Abuja houses · Diaspora title verification guaranteed',
+    heroImage: '/src/assets/images/hero_property_sales_1790768238681.jpg',
+    ctaText: 'Browse Properties for Sale',
+    neighborhoods: ['Lagos', 'Abuja', 'Port Harcourt', 'Ibadan', 'Edo', 'Enugu', 'Anambra']
+  }
+};
+
+export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
+  currentCategory,
+  currentCity,
+  properties,
+  onSelectProperty,
+  onOpenBookingModal,
+  onNavigateCity
+}) => {
+  const listingsRef = useRef<HTMLDivElement>(null);
+  const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'featured' | 'price_low' | 'price_high'>('featured');
+
+  // Determine metadata
+  const meta: LocationMeta = useMemo(() => {
+    if (currentCategory === 'for_sale') {
+      if (currentCity !== 'all' && CITY_METADATA[currentCity]) {
+        return {
+          ...CITY_METADATA[currentCity],
+          title: `Properties for Sale in ${currentCity}`,
+          tagline: `Legally verified lands, off-plan developments, and finished duplexes in ${currentCity} with certified land registry records.`,
+          keywords: `${currentCity} property for sale · ${currentCity} lands with C of O · Direct Owner Deals · Safe Diaspora Escrow`,
+          ctaText: `Explore ${currentCity} Properties for Sale`,
+          heroImage: '/src/assets/images/hero_property_sales_1790768238681.jpg'
+        };
+      }
+      return CITY_METADATA.for_sale_all;
+    }
+    return CITY_METADATA[currentCity] || CITY_METADATA.Lagos;
+  }, [currentCategory, currentCity]);
+
+  // Smooth scroll down to listings
+  const handleCtaClick = () => {
+    listingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // Filter listings based on category and city
+  const filteredListings = useMemo(() => {
+    return properties.filter((p) => {
+      // Category / Listing Type matching
+      if (currentCategory === 'short_stay') {
+        const isShortStay =
+          p.listing_type === 'short_stay' ||
+          p.price_unit === 'per_night' ||
+          p.property_type === 'short_stay' ||
+          p.category === 'short_stay' ||
+          (p.description && (p.description.toLowerCase().includes('short stay') || p.description.toLowerCase().includes('shortlet')));
+        if (!isShortStay) return false;
+      } else {
+        const isShortStay =
+          p.listing_type === 'short_stay' ||
+          p.price_unit === 'per_night' ||
+          p.property_type === 'short_stay' ||
+          p.category === 'short_stay';
+        if (isShortStay) return false;
+      }
+
+      // City matching
+      if (currentCity !== 'all') {
+        const matchCity = p.location.city.toLowerCase().includes(currentCity.toLowerCase());
+        const matchState = p.location.state?.toLowerCase().includes(currentCity.toLowerCase());
+        const matchAddress = p.location.address?.toLowerCase().includes(currentCity.toLowerCase());
+        if (!matchCity && !matchState && !matchAddress) return false;
+      }
+
+      // Neighborhood subfilter
+      if (selectedNeighborhood !== 'all') {
+        const matchNeigh =
+          p.location.neighborhood?.toLowerCase().includes(selectedNeighborhood.toLowerCase()) ||
+          p.location.address?.toLowerCase().includes(selectedNeighborhood.toLowerCase());
+        if (!matchNeigh) return false;
+      }
+
+      return true;
+    }).sort((a, b) => {
+      if (sortBy === 'price_low') return a.priceNgn - b.priceNgn;
+      if (sortBy === 'price_high') return b.priceNgn - a.priceNgn;
+      return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
+    });
+  }, [properties, currentCategory, currentCity, selectedNeighborhood, sortBy]);
+
+  const targetCities: SupportedCity[] = [
+    'Lagos',
+    'Abuja',
+    'Port Harcourt',
+    'Ibadan',
+    'Edo',
+    'Enugu',
+    'Anambra'
+  ];
+
+  return (
+    <div className="min-h-screen bg-white text-slate-900 selection:bg-slate-900 selection:text-white">
+      
+      {/* 1. Category & Location Filter Switcher Bar */}
+      <nav className="border-b border-slate-200 bg-white/95 backdrop-blur-md sticky top-0 z-30" aria-label="Location Switcher">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            
+            {/* Primary Category Switcher: Short Stays vs For Sale */}
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl shrink-0 self-start md:self-auto">
+              <button
+                onClick={() => onNavigateCity(currentCity === 'all' ? 'Lagos' : currentCity, 'short_stay')}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  currentCategory === 'short_stay'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Short-Stay Apartments
+              </button>
+              <button
+                onClick={() => onNavigateCity('all', 'for_sale')}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  currentCategory === 'for_sale'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Properties for Sale
+              </button>
+            </div>
+
+            {/* City Tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+              {currentCategory === 'for_sale' && (
+                <button
+                  onClick={() => onNavigateCity('all', 'for_sale')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                    currentCity === 'all'
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  All Cities
+                </button>
+              )}
+
+              {targetCities.map((city) => (
+                <button
+                  key={city}
+                  onClick={() => onNavigateCity(city, currentCategory)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                    currentCity === city
+                      ? 'bg-slate-900 text-white font-bold shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  {city}
+                </button>
+              ))}
+            </div>
+
+          </div>
+        </div>
+      </nav>
+
+      {/* 2. Hero Section: Clean Split Layout */}
+      <section className="relative overflow-hidden bg-slate-50 border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            
+            {/* Left Column: Conversion-driven Copy & Anchor Jump CTA */}
+            <div className="lg:col-span-7 space-y-6">
+              
+              {/* Trust Tag */}
+              <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700">
+                <span className="flex items-center gap-1 text-emerald-700 font-bold">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>Verified Legit Properties</span>
+                </span>
+                <span aria-hidden="true">·</span>
+                <span>{currentCity === 'all' ? 'All Nigeria Hubs' : `${currentCity}, Nigeria`}</span>
+              </div>
+
+              {/* Title */}
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-950 leading-[1.15] text-balance">
+                {meta.title}
+              </h1>
+
+              {/* Tagline */}
+              <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl">
+                {meta.tagline}
+              </p>
+
+              {/* High-Intent SEO Keywords Subtitle */}
+              <div className="p-3.5 bg-white border border-slate-200 rounded-2xl text-xs text-slate-600 space-y-1">
+                <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>High-Intent Verified Standard</span>
+                </div>
+                <p className="italic text-[11px] text-slate-500">
+                  {meta.keywords}
+                </p>
+              </div>
+
+              {/* Anchor Jump CTA Button & Guarantee */}
+              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                <button
+                  onClick={handleCtaClick}
+                  className="px-8 py-4 bg-slate-950 hover:bg-slate-800 text-white text-sm font-extrabold rounded-2xl shadow-lg shadow-slate-900/10 flex items-center justify-center gap-2.5 transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+                >
+                  <span>{meta.ctaText}</span>
+                  <ChevronDown className="w-4 h-4 animate-bounce" />
+                </button>
+
+                <div className="flex items-center gap-3 text-xs text-slate-600 pl-1">
+                  <div className="flex items-center gap-1">
+                    <Zap className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span>24/7 Power</span>
+                  </div>
+                  <span aria-hidden="true">·</span>
+                  <div className="flex items-center gap-1">
+                    <Wifi className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Fiber Wi-Fi</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Right Column: High-Grade Luxury Real Estate Image */}
+            <div className="lg:col-span-5 relative">
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200 aspect-[16/11] bg-slate-900">
+                <img
+                  src={meta.heroImage}
+                  alt={meta.title}
+                  className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700"
+                  referrerPolicy="no-referrer"
+                />
+                
+                {/* Visual Scrim for Legibility */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none" />
+
+                {/* Floating Verified Overlay Pill */}
+                <div className="absolute bottom-4 left-4 right-4 p-3 rounded-2xl bg-white/95 backdrop-blur-md border border-white/20 text-slate-900 flex items-center justify-between text-xs shadow-lg">
+                  <div>
+                    <div className="font-extrabold flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>100% Inspected & Live</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">Direct host contact & instant check-in</p>
+                  </div>
+                  <span className="px-2.5 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-lg">
+                    {currentCity}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Active Property Listings Grid (Target of the Anchor Jump) */}
+      <section ref={listingsRef} id="listings" className="py-12 md:py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        
+        {/* Section Header & Sub-filters */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-5">
+          <div>
+            <div className="text-xs font-extrabold uppercase tracking-wider text-emerald-700">
+              {currentCategory === 'short_stay' ? 'Curated Short Stays' : 'Vetted Real Estate Inventory'}
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-950 mt-1">
+              Active Listings in {currentCity === 'all' ? 'Nigeria' : currentCity}
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Showing <strong className="text-slate-900">{filteredListings.length}</strong> available {currentCategory === 'short_stay' ? 'apartments' : 'properties'} ready for immediate booking or inspection
+            </p>
+          </div>
+
+          {/* Controls: Neighborhood & Sort */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {meta.neighborhoods.length > 0 && (
+              <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200 text-xs">
+                <span className="text-slate-500 pl-2 font-medium">Zone:</span>
+                <select
+                  value={selectedNeighborhood}
+                  onChange={(e) => setSelectedNeighborhood(e.target.value)}
+                  className="bg-transparent text-slate-900 font-semibold focus:outline-none pr-2 cursor-pointer"
+                >
+                  <option value="all">All Prime Areas</option>
+                  {meta.neighborhoods.map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200 text-xs">
+              <span className="text-slate-500 pl-2 font-medium">Sort:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="bg-transparent text-slate-900 font-semibold focus:outline-none pr-2 cursor-pointer"
+              >
+                <option value="featured">Featured First</option>
+                <option value="price_low">Price: Low to High</option>
+                <option value="price_high">Price: High to Low</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Listings Grid */}
+        {filteredListings.length === 0 ? (
+          <div className="py-20 text-center bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-4 max-w-xl mx-auto">
+            <Building2 className="w-12 h-12 text-slate-400 mx-auto" />
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold text-slate-900">
+                Fresh Listings for {currentCity} Loading Soon
+              </h3>
+              <p className="text-xs text-slate-600">
+                Our verification team is auditing new properties in this sector. You can submit a custom inquiry or view short stays in other locations.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                onClick={() => onNavigateCity('Lagos', currentCategory)}
+                className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                View Lagos Listings
+              </button>
+              <button
+                onClick={() => setSelectedNeighborhood('all')}
+                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Reset Neighborhood Filter
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredListings.map((property) => {
+              const isShortStay =
+                property.listing_type === 'short_stay' ||
+                property.price_unit === 'per_night' ||
+                property.category === 'short_stay';
+
+              const priceUnitLabel = isShortStay ? ' / night' : ' total';
+              const cleanWhatsapp = (property.whatsappNumber || '+2348030000000').replace(/[^0-9]/g, '');
+              const cleanCall = property.callNumber || property.whatsappNumber || '+2348030000000';
+              const messageText = encodeURIComponent(
+                `Hello Legit Properties, I am inquiring about: ${property.title} in ${property.location.neighborhood || property.location.city} (₦${property.priceNgn.toLocaleString()}${priceUnitLabel}). Is it available?`
+              );
+
+              return (
+                <div
+                  key={property.id}
+                  className="group bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+                >
+                  <div>
+                    {/* Property Image Container */}
+                    <div className="relative aspect-[16/10] bg-slate-100 overflow-hidden cursor-pointer" onClick={() => onSelectProperty(property)}>
+                      <img
+                        src={property.images[0] || property.property_image}
+                        alt={property.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        referrerPolicy="no-referrer"
+                      />
+
+                      {/* Top Badges */}
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap">
+                        <span className="px-2.5 py-1 rounded-full bg-slate-900/90 backdrop-blur-md text-white text-[11px] font-bold">
+                          {property.location.city}
+                        </span>
+                        {property.property_availability === 'sold' ? (
+                          <span className="px-2.5 py-1 rounded-full bg-amber-500 text-amber-950 text-[10px] font-extrabold uppercase">
+                            Sold Out
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full bg-emerald-600/90 text-white text-[10px] font-bold uppercase">
+                            Available
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Media counter */}
+                      <div className="absolute bottom-3 right-3 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-xs text-white text-[10px] font-semibold">
+                        {property.images.length} Photos
+                      </div>
+                    </div>
+
+                    {/* Property Info */}
+                    <div className="p-5 space-y-3">
+                      <div>
+                        <div className="flex items-center gap-1 text-[11px] text-slate-500">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate">{property.location.neighborhood}, {property.location.city}</span>
+                        </div>
+                        <h3
+                          onClick={() => onSelectProperty(property)}
+                          className="font-bold text-base sm:text-lg text-slate-900 line-clamp-1 mt-1 hover:text-emerald-700 transition-colors cursor-pointer"
+                        >
+                          {property.title}
+                        </h3>
+                      </div>
+
+                      {/* Specs */}
+                      <div className="flex items-center gap-3 text-xs text-slate-600 font-medium">
+                        {property.bedrooms && (
+                          <span>{property.bedrooms} Beds</span>
+                        )}
+                        {property.bathrooms && (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <span>{property.bathrooms} Baths</span>
+                          </>
+                        )}
+                        <span aria-hidden="true">·</span>
+                        <span>{property.sizeSqm ? `${property.sizeSqm} sqm` : 'Executive'}</span>
+                      </div>
+
+                      {/* Price in NGN with unit */}
+                      <div className="pt-2 border-t border-slate-100 flex items-baseline gap-1">
+                        <span className="text-xl font-black text-slate-900 font-mono">
+                          ₦{property.priceNgn.toLocaleString()}
+                        </span>
+                        <span className="text-xs text-slate-500 font-medium">
+                          {priceUnitLabel}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions Bar: Dual Agent Contact & Instant Book / Inquire */}
+                  <div className="p-5 pt-0 space-y-2.5">
+                    
+                    {/* Primary Button: Instant Book (Short Stay) or Inquire (For Sale) */}
+                    <button
+                      onClick={() => onOpenBookingModal(property)}
+                      className="w-full py-3 px-4 bg-slate-950 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs active:scale-[0.99]"
+                    >
+                      <Calendar className="w-4 h-4 text-emerald-400" />
+                      <span>{isShortStay ? 'Instant Book This Stay' : 'Inquire / Request Inspection'}</span>
+                    </button>
+
+                    {/* Dual Agent Contact: Direct Call & WhatsApp Integration */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <a
+                        href={`tel:${cleanCall}`}
+                        className="py-2.5 px-3 border border-slate-300 hover:bg-slate-50 text-slate-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        <Phone className="w-3.5 h-3.5 text-slate-600" />
+                        <span>Direct Call</span>
+                      </a>
+
+                      <a
+                        href={`https://wa.me/${cleanWhatsapp}?text=${messageText}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="py-2.5 px-3 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>WhatsApp</span>
+                      </a>
+                    </div>
+
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+      </section>
+
+    </div>
+  );
+};

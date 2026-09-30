@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
-import { X, ShieldCheck, Plus, Trash2, MapPin, DollarSign, Image as ImageIcon, Save, AlertCircle, Copy, Check, Video } from 'lucide-react';
-import { Property, PropertyType, TitleStatus } from '../../types';
+import {
+  X,
+  ShieldCheck,
+  Video,
+  AlertCircle,
+  Copy,
+  Check,
+  Image as ImageIcon,
+  DollarSign,
+  Phone,
+  MapPin,
+  Calendar,
+  Sparkles
+} from 'lucide-react';
+import { Property, SupportedCity, ListingType, PriceUnit, TitleStatus } from '../../types';
 
 interface PropertyFormModalProps {
   isOpen: boolean;
@@ -13,68 +26,92 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   isOpen,
   onClose,
   onSave,
-  propertyToEdit,
+  propertyToEdit
 }) => {
   if (!isOpen) return null;
 
+  // 1. Basic Fields
   const [title, setTitle] = useState(propertyToEdit?.title || '');
-  const [slug, setSlug] = useState(propertyToEdit?.slug || '');
-  const [type, setType] = useState<PropertyType>(propertyToEdit?.type || 'land');
-  const [category, setCategory] = useState<Property['category']>(propertyToEdit?.category || 'prime_land');
-  const [purpose, setPurpose] = useState<Property['purpose']>(propertyToEdit?.purpose || 'Personal Home');
-  const [propertyAvailability, setPropertyAvailability] = useState<'available' | 'sold'>(
-    propertyToEdit?.property_availability === 'sold' ? 'sold' : 'available'
+  const [description, setDescription] = useState(
+    propertyToEdit?.description ||
+      'Verified luxury accommodation featuring uninterrupted 24/7 power, high-speed fiber internet, executive security, and modern designer furnishings.'
   );
-  
-  const [address, setAddress] = useState(propertyToEdit?.location.address || '');
-  const [neighborhood, setNeighborhood] = useState(propertyToEdit?.location.neighborhood || '');
-  const [city, setCity] = useState<'Lagos' | 'Abuja' | 'Port Harcourt' | 'Ibadan'>(
-    (propertyToEdit?.location.city as any) || 'Lagos'
+
+  // 2. Listing Type & Price Unit
+  const [listingType, setListingType] = useState<ListingType>(
+    propertyToEdit?.listing_type ||
+      (propertyToEdit?.category === 'short_stay' || propertyToEdit?.property_type === 'short_stay'
+        ? 'short_stay'
+        : 'short_stay')
   );
-  const [stateName, setStateName] = useState(propertyToEdit?.location.state || 'Lagos State');
-  
-  const [priceNgn, setPriceNgn] = useState<number>(propertyToEdit?.priceNgn || 50000000);
-  const [sizeSqm, setSizeSqm] = useState<number>(propertyToEdit?.sizeSqm || 600);
-  const [plotsCount, setPlotsCount] = useState<number>(propertyToEdit?.plotsCount || 1);
-  const [bedrooms, setBedrooms] = useState<number | undefined>(propertyToEdit?.bedrooms);
-  const [bathrooms, setBathrooms] = useState<number | undefined>(propertyToEdit?.bathrooms);
-  
-  const [titleStatus, setTitleStatus] = useState<TitleStatus>(
-    propertyToEdit?.titleStatus || 'Certificate of Occupancy (C of O)'
+
+  const [priceUnit, setPriceUnit] = useState<PriceUnit>(
+    propertyToEdit?.price_unit || (listingType === 'short_stay' ? 'per_night' : 'total')
   );
-  const [titleVerified, setTitleVerified] = useState<boolean>(propertyToEdit?.titleVerified ?? true);
-  const [verificationDocNo, setVerificationDocNo] = useState(propertyToEdit?.verificationDocNo || '');
-  
-  const [developerName, setDeveloperName] = useState(propertyToEdit?.developerInfo?.name || 'Legit Verified Direct Owner');
-  const [developerTrack, setDeveloperTrack] = useState(propertyToEdit?.developerInfo?.trackRecord || '10+ Years Clean Title History');
-  const [developerStatus, setDeveloperStatus] = useState(propertyToEdit?.developerInfo?.verifiedStatus || 'CAC & Title Audited');
-  
-  const [featured, setFeatured] = useState(propertyToEdit?.featured ?? false);
-  const [description, setDescription] = useState(propertyToEdit?.description || '');
-  const [whatsappNumber, setWhatsappNumber] = useState(propertyToEdit?.whatsappNumber || '+2348030000000');
-  const [callNumber, setCallNumber] = useState(propertyToEdit?.callNumber || '+2348030000000');
-  
+
+  // 3. Location
+  const [city, setCity] = useState<SupportedCity>(
+    (propertyToEdit?.location?.city as SupportedCity) || 'Lagos'
+  );
+  const [neighborhood, setNeighborhood] = useState(propertyToEdit?.location?.neighborhood || '');
+  const [address, setAddress] = useState(propertyToEdit?.location?.address || '');
+
+  // 4. Price & Specs
+  const [priceNgn, setPriceNgn] = useState<number>(propertyToEdit?.priceNgn || 120000);
+  const [bedrooms, setBedrooms] = useState<number>(propertyToEdit?.bedrooms || 2);
+  const [bathrooms, setBathrooms] = useState<number>(propertyToEdit?.bathrooms || 2);
+
+  // 5. Contact Numbers
+  const [whatsappNumber, setWhatsappNumber] = useState(
+    propertyToEdit?.whatsappNumber || '+2348030000000'
+  );
+  const [callNumber, setCallNumber] = useState(
+    propertyToEdit?.callNumber || '+2348030000000'
+  );
+
+  // 6. Media: Main Image & 4 Separate Gallery Images
+  const existingImages = propertyToEdit?.images || [];
+  const [mainImageUrl, setMainImageUrl] = useState(
+    propertyToEdit?.property_image ||
+      existingImages[0] ||
+      'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80'
+  );
+
+  const [galleryImg1, setGalleryImg1] = useState(existingImages[1] || 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80');
+  const [galleryImg2, setGalleryImg2] = useState(existingImages[2] || 'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=80');
+  const [galleryImg3, setGalleryImg3] = useState(existingImages[3] || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80');
+  const [galleryImg4, setGalleryImg4] = useState(existingImages[4] || 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80');
+
+  // 7. Video & Availability
   const [propertyVideo, setPropertyVideo] = useState(
     propertyToEdit?.property_video || propertyToEdit?.virtualTourUrl || ''
   );
-
-  const [images, setImages] = useState<string[]>(
-    propertyToEdit?.images && propertyToEdit.images.length > 0
-      ? propertyToEdit.images
-      : ['https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80']
+  const [propertyAvailability, setPropertyAvailability] = useState<'available' | 'sold'>(
+    propertyToEdit?.property_availability === 'sold' ? 'sold' : 'available'
   );
-  const [newImageUrl, setNewImageUrl] = useState('');
 
-  const [features, setFeatures] = useState<string[]>(
-    propertyToEdit?.features && propertyToEdit.features.length > 0
-      ? propertyToEdit.features
-      : ['100% Dry Land', 'Paved Access Road', 'Registered Title Survey']
+  // 8. Title Status
+  const [titleStatus, setTitleStatus] = useState<TitleStatus>(
+    propertyToEdit?.titleStatus || (listingType === 'short_stay' ? 'Short Stay Verified License' : 'Certificate of Occupancy (C of O)')
   );
-  const [newFeatureText, setNewFeatureText] = useState('');
 
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copiedError, setCopiedError] = useState(false);
+
+  // Automatic synchronization: when listingType switches, align default priceUnit & titleStatus
+  const handleListingTypeChange = (type: ListingType) => {
+    setListingType(type);
+    if (type === 'short_stay') {
+      setPriceUnit('per_night');
+      if (priceNgn > 5000000) setPriceNgn(150000);
+      setTitleStatus('Short Stay Verified License');
+    } else {
+      setPriceUnit('total');
+      if (priceNgn < 1000000) setPriceNgn(75000000);
+      setTitleStatus('Certificate of Occupancy (C of O)');
+    }
+  };
 
   const handleCopyError = () => {
     if (errorMsg) {
@@ -82,36 +119,6 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       setCopiedError(true);
       setTimeout(() => setCopiedError(false), 2000);
     }
-  };
-
-  // Auto-generate slug from title if empty
-  const handleTitleChange = (val: string) => {
-    setTitle(val);
-    if (!propertyToEdit) {
-      setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
-    }
-  };
-
-  const handleAddImage = () => {
-    if (newImageUrl.trim()) {
-      setImages([...images, newImageUrl.trim()]);
-      setNewImageUrl('');
-    }
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setImages(images.filter((_, idx) => idx !== index));
-  };
-
-  const handleAddFeature = () => {
-    if (newFeatureText.trim()) {
-      setFeatures([...features, newFeatureText.trim()]);
-      setNewFeatureText('');
-    }
-  };
-
-  const handleRemoveFeature = (index: number) => {
-    setFeatures(features.filter((_, idx) => idx !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -124,88 +131,103 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
     setIsSaving(true);
     setErrorMsg(null);
 
+    // Build gallery images array
+    const galleryArray = [
+      mainImageUrl.trim(),
+      galleryImg1.trim(),
+      galleryImg2.trim(),
+      galleryImg3.trim(),
+      galleryImg4.trim()
+    ].filter(Boolean);
+
+    const stateMap: Record<SupportedCity, string> = {
+      Lagos: 'Lagos State',
+      Abuja: 'Federal Capital Territory',
+      'Port Harcourt': 'Rivers State',
+      Ibadan: 'Oyo State',
+      Edo: 'Edo State',
+      Enugu: 'Enugu State',
+      Anambra: 'Anambra State'
+    };
+
     const payload: Partial<Property> = {
       ...(propertyToEdit?.id ? { id: propertyToEdit.id } : {}),
       title: title.trim(),
-      slug: slug.trim() || title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      type,
-      category,
-      purpose,
+      slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+      description: description.trim(),
+      listing_type: listingType,
+      property_type: listingType === 'short_stay' ? 'short_stay' : 'for_sale',
+      type: (listingType === 'short_stay' ? 'short_stay' : 'apartment') as any,
+      price_unit: priceUnit,
+      category: listingType === 'short_stay' ? 'short_stay' : 'luxury_apartment',
+      purpose: listingType === 'short_stay' ? 'Vacation & Short Stay' : 'Investment',
       location: {
-        address: address.trim() || 'Prime Axis',
+        address: address.trim() || `${neighborhood || city}, ${stateMap[city]}`,
         neighborhood: neighborhood.trim() || city,
         city,
-        state: stateName
+        state: stateMap[city]
       },
       priceNgn: Number(priceNgn),
-      sizeSqm: Number(sizeSqm) || undefined,
-      plotsCount: Number(plotsCount) || 1,
-      bedrooms: bedrooms ? Number(bedrooms) : undefined,
-      bathrooms: bathrooms ? Number(bathrooms) : undefined,
-      titleStatus,
-      titleVerified,
-      verificationDocNo: verificationDocNo.trim() || 'LEGIT/VERIFIED/2026',
-      developerInfo: {
-        name: developerName.trim(),
-        trackRecord: developerTrack.trim(),
-        verifiedStatus: developerStatus.trim()
-      },
-      featured,
-      images: images.length > 0 ? images : ['https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80'],
-      description: description.trim() || 'Verified real estate listing with clean title clearance.',
-      features,
-      nearbyLandmarks: ['Close to Express Road', 'Prime Commercial Hub'],
-      paymentPlan: {
-        available: true,
-        minDownpaymentPercent: 30,
-        maxTenorMonths: 12,
-        monthlyEstNgn: Math.round(priceNgn * 0.7 / 12)
-      },
-      dateAdded: propertyToEdit?.dateAdded || new Date().toISOString().split('T')[0],
-      verificationNotes: '100% Certified Title Search at Lands Registry',
-      whatsappNumber: whatsappNumber.trim() || '+2348030000000',
-      callNumber: callNumber.trim() || '+2348030000000',
+      bedrooms: Number(bedrooms) || undefined,
+      bathrooms: Number(bathrooms) || undefined,
+      whatsappNumber: whatsappNumber.trim(),
+      callNumber: callNumber.trim(),
+      property_image: mainImageUrl.trim(),
+      gallery_images: galleryArray,
+      images: galleryArray,
       property_video: propertyVideo.trim() || undefined,
+      virtualTourUrl: propertyVideo.trim() || undefined,
       property_availability: propertyAvailability,
-      virtualTourUrl: propertyVideo.trim() || undefined
+      titleStatus,
+      titleVerified: true,
+      verificationDocNo: propertyToEdit?.verificationDocNo || `LEGIT/${city.toUpperCase()}/2026`,
+      developerInfo: propertyToEdit?.developerInfo || {
+        name: 'Legit Verified Direct Host',
+        trackRecord: '5+ Years Clean Inspection Record',
+        verifiedStatus: 'CAC & Identity Audited'
+      },
+      featured: true,
+      features: listingType === 'short_stay' 
+        ? ['24/7 Power', 'High Speed Fiber Wi-Fi', 'Security & Access Control', 'Dedicated Chef / Concierge']
+        : ['100% Dry Land / Prime Building', 'Registered Title Survey', 'Paved Access Road'],
+      amenities: ['Air Conditioning', 'Smart TV with Netflix', 'Fully Equipped Kitchen', '24/7 Security Patrol'],
+      nearbyLandmarks: ['Close to Premium Hubs', 'Airport Corridor Access'],
+      dateAdded: propertyToEdit?.dateAdded || new Date().toISOString().split('T')[0],
+      verificationNotes: 'Audited & certified by Legit Properties Verification Desk'
     };
 
     const res = await onSave(payload);
     setIsSaving(false);
-    
+
     if (typeof res === 'boolean') {
-      if (res) {
-        onClose();
-      } else {
-        setErrorMsg('Failed to save property. Please check database permissions or network connection.');
-      }
+      if (res) onClose();
+      else setErrorMsg('Failed to save property. Please check database permissions.');
     } else {
-      if (res.success) {
-        onClose();
-      } else {
-        // Display exact error message and details from database
-        setErrorMsg(res.error || 'Failed to save property to database.');
-      }
+      if (res.success) onClose();
+      else setErrorMsg(res.error || 'Failed to save property to database.');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="relative bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-6 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="relative bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-6 flex flex-col max-h-[92vh]">
         
         {/* Modal Header */}
-        <div className="p-5 bg-[#102033] text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-[#167A5A] rounded-xl text-white">
+            <div className="p-2 bg-emerald-700 rounded-xl text-white">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
               <h3 className="font-extrabold text-base sm:text-lg">
-                {propertyToEdit ? 'Edit Property Listing' : 'Publish Live Verified Property'}
+                {propertyToEdit ? 'Edit Property Listing' : 'Add New Property Listing'}
               </h3>
-              <p className="text-xs text-slate-400">Syncs directly to <code className="text-emerald-400 font-mono">properties</code> database</p>
+              <p className="text-xs text-slate-400">
+                Syncs live to the <code className="text-emerald-400 font-mono">properties</code> database
+              </p>
             </div>
           </div>
+
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer"
@@ -214,17 +236,17 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Body */}
+        {/* Modal Form */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-700 text-xs sm:text-sm">
           
           {errorMsg && (
-            <div className="p-4 bg-red-50 border border-red-200 text-red-900 rounded-2xl text-xs space-y-2 animate-in fade-in duration-150">
-              <div className="flex items-start justify-between gap-3">
+            <div className="p-4 bg-red-50 border border-red-200 text-red-900 rounded-2xl text-xs space-y-2">
+              <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold text-red-950 block mb-0.5">Database Operation Notice:</span>
-                    <p className="font-mono text-[11px] leading-relaxed break-words bg-red-100/70 p-2.5 rounded-xl border border-red-200/80 text-red-900">
+                    <span className="font-bold text-red-950 block">Database Sync Notice:</span>
+                    <p className="font-mono text-[11px] leading-relaxed break-words bg-red-100 p-2 rounded-xl text-red-900">
                       {errorMsg}
                     </p>
                   </div>
@@ -232,38 +254,23 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                 <button
                   type="button"
                   onClick={handleCopyError}
-                  className="px-2.5 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 rounded-lg text-[11px] font-semibold flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
-                  title="Copy error message"
+                  className="px-2.5 py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded text-[11px] font-semibold flex items-center gap-1 shrink-0"
                 >
                   {copiedError ? <Check className="w-3 h-3 text-emerald-700" /> : <Copy className="w-3 h-3" />}
                   <span>{copiedError ? 'Copied' : 'Copy'}</span>
                 </button>
               </div>
-
-              {errorMsg.toLowerCase().includes('row-level security') && (
-                <div className="text-[11px] text-red-800 bg-white/80 p-2.5 rounded-xl border border-red-200">
-                  <strong className="block text-red-950 mb-1">💡 Row Level Security (RLS) Tip:</strong>
-                  Ensure your database table policy allows inserts for authenticated users:
-                  <pre className="mt-1 p-2 bg-slate-900 text-emerald-400 rounded-lg font-mono text-[10px] overflow-x-auto">
-{`CREATE POLICY "Enable all for authenticated users" 
-ON public.properties FOR ALL 
-TO authenticated 
-USING (true) 
-WITH CHECK (true);`}
-                  </pre>
-                </div>
-              )}
             </div>
           )}
 
-          {/* Section 1: Basic Information */}
+          {/* Section 1: Classification & Type */}
           <div className="space-y-4">
-            <h4 className="font-bold text-[#102033] text-xs uppercase tracking-wider border-b pb-1">
+            <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider border-b border-slate-200 pb-1">
               1. Title, Classification & Availability
             </h4>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="sm:col-span-2 lg:col-span-3">
+
+            <div className="space-y-3">
+              <div>
                 <label className="block font-semibold text-slate-700 mb-1">
                   Property Title *
                 </label>
@@ -271,347 +278,321 @@ WITH CHECK (true);`}
                   type="text"
                   required
                   value={title}
-                  onChange={(e) => handleTitleChange(e.target.value)}
-                  placeholder="e.g. 600sqm Dry Land in Prime Lekki Phase 1"
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900"
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Luxury 2-Bedroom Waterfront Penthouse with Lagoon View"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900 text-xs sm:text-sm"
                 />
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Property Type</label>
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value as PropertyType)}
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900 bg-white"
-                >
-                  <option value="land">Verified Land Plot</option>
-                  <option value="apartment">Luxury Apartment</option>
-                  <option value="duplex">Executive Duplex / Villa</option>
-                  <option value="terrace">Terrace Duplex</option>
-                  <option value="commercial">Commercial Plot / Space</option>
-                  <option value="investment">Land Banking Investment</option>
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                
+                {/* Listing Type Dropdown: short_stay vs for_sale */}
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Listing Type *
+                  </label>
+                  <select
+                    value={listingType}
+                    onChange={(e) => handleListingTypeChange(e.target.value as ListingType)}
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900 bg-white font-bold cursor-pointer"
+                  >
+                    <option value="short_stay">🏨 Short Stay (Airbnb / Vacation)</option>
+                    <option value="for_sale">🏡 Property for Sale (Purchase)</option>
+                  </select>
+                </div>
+
+                {/* Location Dropdown: Lagos, Abuja, Port Harcourt, Ibadan, Edo, Enugu, Anambra */}
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Location City *
+                  </label>
+                  <select
+                    value={city}
+                    onChange={(e) => setCity(e.target.value as SupportedCity)}
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900 bg-white font-bold cursor-pointer"
+                  >
+                    <option value="Lagos">Lagos</option>
+                    <option value="Abuja">Abuja</option>
+                    <option value="Port Harcourt">Port Harcourt</option>
+                    <option value="Ibadan">Ibadan</option>
+                    <option value="Edo">Edo</option>
+                    <option value="Enugu">Enugu</option>
+                    <option value="Anambra">Anambra</option>
+                  </select>
+                </div>
+
+                {/* Property Availability: available vs sold */}
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Property Availability *
+                  </label>
+                  <select
+                    value={propertyAvailability}
+                    onChange={(e) => setPropertyAvailability(e.target.value as 'available' | 'sold')}
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900 bg-white font-bold cursor-pointer"
+                  >
+                    <option value="available">🟢 Available (Live & Bookable)</option>
+                    <option value="sold">🔴 Sold (Unavailable / Booked)</option>
+                  </select>
+                </div>
+
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Homepage Carousel Category</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900 bg-white"
-                >
-                  <option value="prime_land">Prime Lands & Plots</option>
-                  <option value="luxury_apartment">Luxury Apartments</option>
-                  <option value="investment_plot">Investment & Land Banking</option>
-                  <option value="executive_duplex">Executive Duplexes & Villas</option>
-                  <option value="diaspora_choice">Diaspora Choice</option>
-                  <option value="newly_listed">Newly Listed Deal</option>
-                </select>
+              {/* Neighborhood & Address */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Neighborhood / District</label>
+                  <input
+                    type="text"
+                    value={neighborhood}
+                    onChange={(e) => setNeighborhood(e.target.value)}
+                    placeholder="e.g. Ikoyi / Maitama / Old GRA / Bodija"
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Specific Address / Landmark</label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="e.g. Off Alexander Avenue"
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Pricing & Pricing Unit */}
+          <div className="space-y-4">
+            <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider border-b border-slate-200 pb-1">
+              2. Price in Naira & Price Unit
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div className="sm:col-span-2">
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Price in Naira (NGN ₦) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2.5 font-bold text-slate-500">₦</span>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    step={1000}
+                    value={priceNgn}
+                    onChange={(e) => setPriceNgn(Number(e.target.value))}
+                    className="w-full pl-8 pr-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900 font-mono font-bold"
+                  />
+                </div>
               </div>
 
+              {/* Price Unit Dropdown: per night vs total */}
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Property Availability *
+                  Price Unit *
                 </label>
                 <select
-                  value={propertyAvailability}
-                  onChange={(e) => setPropertyAvailability(e.target.value as 'available' | 'sold')}
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900 bg-white font-medium"
+                  value={priceUnit}
+                  onChange={(e) => setPriceUnit(e.target.value as PriceUnit)}
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900 bg-white font-semibold cursor-pointer"
                 >
-                  <option value="available">🟢 available (Active & In Market)</option>
-                  <option value="sold">🔴 sold (Closed / Off Market)</option>
+                  <option value="per_night">per night (Short Stay)</option>
+                  <option value="total">total (Purchase Price)</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Bedrooms / Baths</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    value={bedrooms}
+                    onChange={(e) => setBedrooms(Number(e.target.value))}
+                    placeholder="Beds"
+                    className="w-full px-2 py-2.5 border border-slate-300 rounded-xl text-center font-bold"
+                  />
+                  <input
+                    type="number"
+                    min={1}
+                    value={bathrooms}
+                    onChange={(e) => setBathrooms(Number(e.target.value))}
+                    placeholder="Baths"
+                    className="w-full px-2 py-2.5 border border-slate-300 rounded-xl text-center font-bold"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Section 2: Location & Pricing */}
+          {/* Section 3: Agent Direct Contact Numbers */}
           <div className="space-y-4">
-            <h4 className="font-bold text-[#102033] text-xs uppercase tracking-wider border-b pb-1">
-              2. Location & Pricing (NGN)
+            <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider border-b border-slate-200 pb-1">
+              3. Dual Agent Contact (WhatsApp & Direct Call)
             </h4>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">City / Region</label>
-                <select
-                  value={city}
-                  onChange={(e) => {
-                    const newCity = e.target.value as any;
-                    setCity(newCity);
-                    setStateName(newCity === 'Abuja' ? 'Federal Capital Territory' : newCity === 'Port Harcourt' ? 'Rivers State' : 'Lagos State');
-                  }}
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900 bg-white"
-                >
-                  <option value="Lagos">Lagos</option>
-                  <option value="Abuja">Abuja</option>
-                  <option value="Port Harcourt">Port Harcourt</option>
-                  <option value="Ibadan">Ibadan</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Neighborhood / District</label>
+                <label className="block font-semibold text-slate-700 mb-1">WhatsApp Number *</label>
                 <input
                   type="text"
-                  value={neighborhood}
-                  onChange={(e) => setNeighborhood(e.target.value)}
-                  placeholder="e.g. Lekki Phase 1 / Ikoyi"
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Street Address</label>
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="e.g. Admiralty Way Axis"
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Price in NGN (₦) *</label>
-                <input
-                  type="number"
                   required
-                  min={0}
-                  step={500000}
-                  value={priceNgn}
-                  onChange={(e) => setPriceNgn(Number(e.target.value))}
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900 font-bold"
+                  value={whatsappNumber}
+                  onChange={(e) => setWhatsappNumber(e.target.value)}
+                  placeholder="+234 803 000 0000"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Size (Sqm)</label>
-                <input
-                  type="number"
-                  value={sizeSqm || ''}
-                  onChange={(e) => setSizeSqm(Number(e.target.value))}
-                  placeholder="e.g. 600"
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Bedrooms (If building)</label>
-                <input
-                  type="number"
-                  value={bedrooms || ''}
-                  onChange={(e) => setBedrooms(e.target.value ? Number(e.target.value) : undefined)}
-                  placeholder="e.g. 4"
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Section 3: Title Verification Details */}
-          <div className="space-y-4">
-            <h4 className="font-bold text-[#102033] text-xs uppercase tracking-wider border-b pb-1">
-              3. Legal Title Document Status
-            </h4>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Title Document Type</label>
-                <select
-                  value={titleStatus}
-                  onChange={(e) => setTitleStatus(e.target.value as TitleStatus)}
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900 bg-white font-medium"
-                >
-                  <option value="Certificate of Occupancy (C of O)">Certificate of Occupancy (C of O)</option>
-                  <option value="Governor's Consent">Governor's Consent</option>
-                  <option value="Gazette">Gazette</option>
-                  <option value="Excision Title">Excision Title</option>
-                  <option value="Registered Survey & Deed">Registered Survey & Deed</option>
-                  <option value="Federal C of O">Federal C of O</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Verification / Ref Doc Number</label>
+                <label className="block font-semibold text-slate-700 mb-1">Direct Call Number *</label>
                 <input
                   type="text"
-                  value={verificationDocNo}
-                  onChange={(e) => setVerificationDocNo(e.target.value)}
-                  placeholder="e.g. LAG/GOV/CONSENT/2026/9912"
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900"
+                  required
+                  value={callNumber}
+                  onChange={(e) => setCallNumber(e.target.value)}
+                  placeholder="+234 803 000 0000"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900"
                 />
               </div>
             </div>
           </div>
 
-          {/* Section 4: Images & Media */}
+          {/* Section 4: Main Image & 4 Separate Gallery Image URLs */}
           <div className="space-y-4">
-            <h4 className="font-bold text-[#102033] text-xs uppercase tracking-wider border-b pb-1">
-              4. Property Media: Video Link & Photos
+            <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider border-b border-slate-200 pb-1">
+              4. Main Property Image URL & 4 Separate Gallery Images
             </h4>
 
-            {/* Property Video Input */}
-            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-1.5">
-              <label className="block font-semibold text-slate-700 text-xs flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Video className="w-4 h-4 text-emerald-700" />
-                  <span>Property Video Link (`property_video`)</span>
-                </span>
-                <span className="text-[11px] text-slate-400 font-normal">Optional (YouTube / Vimeo)</span>
+            <div className="space-y-3">
+              {/* Main Image */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Main Property Image URL (Card Thumbnail & Hero) *
+                </label>
+                <input
+                  type="url"
+                  required
+                  value={mainImageUrl}
+                  onChange={(e) => setMainImageUrl(e.target.value)}
+                  placeholder="https://images.unsplash.com/..."
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900 text-xs"
+                />
+              </div>
+
+              {/* 4 Separate Gallery Image URLs */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1 text-xs">
+                    Gallery Image 1 URL
+                  </label>
+                  <input
+                    type="url"
+                    value={galleryImg1}
+                    onChange={(e) => setGalleryImg1(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1 text-xs">
+                    Gallery Image 2 URL
+                  </label>
+                  <input
+                    type="url"
+                    value={galleryImg2}
+                    onChange={(e) => setGalleryImg2(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1 text-xs">
+                    Gallery Image 3 URL
+                  </label>
+                  <input
+                    type="url"
+                    value={galleryImg3}
+                    onChange={(e) => setGalleryImg3(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1 text-xs">
+                    Gallery Image 4 URL
+                  </label>
+                  <input
+                    type="url"
+                    value={galleryImg4}
+                    onChange={(e) => setGalleryImg4(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 5: Property Video Walkthrough (YouTube / Vimeo) */}
+          <div className="space-y-4">
+            <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider border-b border-slate-200 pb-1">
+              5. Video Walkthrough & Virtual Tour
+            </h4>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                <Video className="w-4 h-4 text-emerald-700" />
+                <span>Property Video Link (`property_video`)</span>
               </label>
               <input
                 type="url"
                 value={propertyVideo}
                 onChange={(e) => setPropertyVideo(e.target.value)}
                 placeholder="e.g. https://www.youtube.com/watch?v=... or https://vimeo.com/..."
-                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900 text-xs sm:text-sm bg-white"
+                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900"
               />
-              <p className="text-[11px] text-slate-500">
-                Direct walkthrough link for verified buyers and overseas diaspora inquiries.
+              <p className="text-[11px] text-slate-500 mt-1">
+                Walkthrough tour for verified diaspora buyers and guests looking for authentic views.
               </p>
             </div>
-
-            <div className="space-y-2">
-              <label className="block font-semibold text-slate-700 text-xs">
-                Property Photos (Image URLs)
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                  placeholder="Paste high-res image URL (e.g. https://images.unsplash.com/...)"
-                  className="flex-1 px-3.5 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900 text-xs"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddImage}
-                  className="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold text-xs hover:bg-slate-700 cursor-pointer"
-                >
-                  Add Image
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
-              {images.map((img, idx) => (
-                <div key={idx} className="relative group rounded-xl overflow-hidden border border-slate-200 aspect-video bg-slate-100">
-                  <img src={img} alt="preview" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveImage(idx)}
-                    className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-md opacity-80 group-hover:opacity-100 transition-opacity cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
           </div>
 
-          {/* Section 5: Description & Highlights */}
-          <div className="space-y-3">
-            <h4 className="font-bold text-[#102033] text-xs uppercase tracking-wider border-b pb-1">
-              5. Description & Key Highlights
-            </h4>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Full Description</label>
-              <textarea
-                rows={3}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Comprehensive details on dry soil condition, road network, power availability, security gate..."
-                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900 text-xs sm:text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Features & Highlights</label>
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={newFeatureText}
-                  onChange={(e) => setNewFeatureText(e.target.value)}
-                  placeholder="e.g. 100% High Dry Soil"
-                  className="flex-1 px-3.5 py-2 border border-slate-300 rounded-xl text-xs text-slate-900"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddFeature}
-                  className="px-3 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold cursor-pointer"
-                >
-                  Add Feature
-                </button>
-              </div>
-
-              <div className="flex flex-wrap gap-1.5">
-                {features.map((feat, idx) => (
-                  <span key={idx} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs border border-slate-200">
-                    <span>{feat}</span>
-                    <button type="button" onClick={() => handleRemoveFeature(idx)} className="text-slate-400 hover:text-red-600 cursor-pointer">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
+          {/* Section 6: Full Description */}
+          <div className="space-y-2">
+            <label className="block font-semibold text-slate-700">
+              Full Property Description *
+            </label>
+            <textarea
+              rows={4}
+              required
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full p-3.5 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900 text-xs sm:text-sm leading-relaxed"
+            />
           </div>
 
-          {/* Section 6: Direct Contact Numbers */}
-          <div className="space-y-3">
-            <h4 className="font-bold text-[#102033] text-xs uppercase tracking-wider border-b pb-1">
-              6. Direct Verified Contact Numbers
-            </h4>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">WhatsApp Number</label>
-                <input
-                  type="text"
-                  value={whatsappNumber}
-                  onChange={(e) => setWhatsappNumber(e.target.value)}
-                  placeholder="e.g. +2348030000000"
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900 text-xs sm:text-sm font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Direct Call Number</label>
-                <input
-                  type="text"
-                  value={callNumber}
-                  onChange={(e) => setCallNumber(e.target.value)}
-                  placeholder="e.g. +2348030000000"
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-[#167A5A] text-slate-900 text-xs sm:text-sm font-mono"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Footer Submit Actions */}
-          <div className="pt-4 border-t border-slate-200 flex justify-end gap-3 shrink-0">
+          {/* Footer Save Buttons */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50 font-bold text-xs cursor-pointer"
+              className="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="px-6 py-2.5 rounded-xl bg-[#167A5A] hover:bg-[#13684d] text-white font-bold text-xs flex items-center gap-2 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+              className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
             >
-              {isSaving ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  <span>{propertyToEdit ? 'Save Property Changes' : 'Publish Property Listing'}</span>
-                </>
-              )}
+              {isSaving ? 'Saving to Database...' : propertyToEdit ? 'Update Property' : 'Publish Property'}
             </button>
           </div>
 

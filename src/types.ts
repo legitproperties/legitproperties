@@ -1,4 +1,9 @@
-export type PropertyType = 'land' | 'apartment' | 'house' | 'terrace' | 'duplex' | 'commercial' | 'offplan' | 'investment';
+export type PropertyType = 'short_stay' | 'for_sale' | 'apartment' | 'house' | 'terrace' | 'duplex' | 'commercial' | 'land' | 'investment';
+
+export type ListingType = 'short_stay' | 'for_sale';
+export type PriceUnit = 'per_night' | 'total';
+
+export type SupportedCity = 'Lagos' | 'Abuja' | 'Port Harcourt' | 'Ibadan' | 'Edo' | 'Enugu' | 'Anambra';
 
 export type TitleStatus = 
   | 'Certificate of Occupancy (C of O)'
@@ -6,7 +11,8 @@ export type TitleStatus =
   | 'Gazette'
   | 'Excision Title'
   | 'Registered Survey & Deed'
-  | 'Federal C of O';
+  | 'Federal C of O'
+  | 'Short Stay Verified License';
 
 export type CurrencyCode = 'NGN' | 'USD' | 'GBP';
 
@@ -15,12 +21,14 @@ export interface Property {
   title: string;
   slug: string;
   type: PropertyType;
-  category: 'prime_land' | 'luxury_apartment' | 'investment_plot' | 'newly_listed' | 'executive_duplex' | 'diaspora_choice';
-  purpose: 'Personal Home' | 'Investment' | 'Rental Income' | 'Retirement' | 'Commercial Use';
+  listing_type?: ListingType;
+  price_unit?: PriceUnit;
+  category: 'prime_land' | 'luxury_apartment' | 'investment_plot' | 'newly_listed' | 'executive_duplex' | 'diaspora_choice' | 'short_stay';
+  purpose: 'Personal Home' | 'Investment' | 'Rental Income' | 'Retirement' | 'Commercial Use' | 'Vacation & Short Stay';
   location: {
     address: string;
     neighborhood: string;
-    city: 'Lagos' | 'Abuja' | 'Port Harcourt' | 'Ibadan';
+    city: SupportedCity | string;
     state: string;
   };
   priceNgn: number;
@@ -59,6 +67,27 @@ export interface Property {
   property_type?: string;
   property_video?: string;
   property_availability?: 'available' | 'sold';
+}
+
+export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
+
+export interface BookingRequest {
+  id: string;
+  propertyId: string;
+  propertyTitle: string;
+  propertyLocation: string;
+  guestName: string;
+  email: string;
+  phone: string;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  guestsCount: number;
+  pricePerNightNgn: number;
+  totalAmountNgn: number;
+  status: BookingStatus;
+  specialRequests?: string;
+  createdAt: string;
 }
 
 export interface FilterOptions {
