@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Property, SupportedCity, ListingType, CurrencyCode, BookingRequest } from './types';
-import { INITIAL_PROPERTIES } from './data/properties';
 import { fetchPropertiesFromSupabase } from './lib/supabase';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
 import { AdminAuthPage } from './components/admin/AdminAuthPage';
@@ -104,16 +103,14 @@ function MainApp() {
   const [currentCategory, setCurrentCategory] = useState<ListingType>(routeState.category);
   const [currentCity, setCurrentCity] = useState<SupportedCity | 'all'>(routeState.city);
 
-  const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES);
-  const [currency, setCurrency] = useState<CurrencyCode>('NGN');
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [currency] = useState<CurrencyCode>('NGN');
 
-  // Load properties live from Supabase
+  // Load properties live from Supabase (Strict zero mock data)
   useEffect(() => {
     async function loadProperties() {
       const data = await fetchPropertiesFromSupabase();
-      if (data && data.length > 0) {
-        setProperties(data);
-      }
+      setProperties(data || []);
     }
     loadProperties();
   }, []);
@@ -269,7 +266,7 @@ function MainApp() {
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans text-slate-900 selection:bg-slate-900 selection:text-white">
       
-      {/* 1. Universal Top Navigation Bar */}
+      {/* 1. Universal Top Navigation Bar: Minimalist Logo + Hamburger Drawer (Strictly No Currency Switcher) */}
       <Navbar
         savedCount={savedIds.length}
         onOpenSaved={() => setIsSavedDrawerOpen(true)}
@@ -281,14 +278,8 @@ function MainApp() {
         onOpenLegalGuide={() => setIsLegalGuideOpen(true)}
         onOpenContact={() => setIsContactOpen(true)}
         onOpenFaq={() => setIsFaqOpen(true)}
-        currency={currency}
-        onToggleCurrency={(code) => setCurrency(code)}
-        searchQuery=""
-        onSearchChange={(q) => {
-          if (q.trim()) {
-            setIsFilterModalOpen(true);
-          }
-        }}
+        onNavigateCity={handleNavigateCity}
+        onOpenAdmin={() => navigateTo('/admin')}
       />
 
       {/* 2. Public-Facing Localized Landing Page (SEO & Conversion Optimized) */}

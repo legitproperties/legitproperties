@@ -1,26 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
-  Search,
-  Bookmark,
-  SlidersHorizontal,
-  User,
-  Sparkles,
   Menu,
   X,
+  MapPin,
+  Bookmark,
+  Sparkles,
+  Search,
   BookOpen,
   HelpCircle,
   Phone,
   Info,
+  Lock,
   ChevronRight,
-  Globe
+  Building2,
+  Calendar,
+  Layers,
+  CheckCircle2
 } from 'lucide-react';
-import { CurrencyCode } from '../types';
+import { SupportedCity } from '../types';
 
 interface NavbarProps {
   savedCount: number;
   onOpenSaved: () => void;
-  onOpenFilter: () => void;
+  onOpenFilter?: () => void;
   onOpenTitleCheck: () => void;
   onOpenLeadModal: () => void;
   onOpenDashboard: () => void;
@@ -28,11 +31,19 @@ interface NavbarProps {
   onOpenLegalGuide: () => void;
   onOpenContact: () => void;
   onOpenFaq: () => void;
-  currency: CurrencyCode;
-  onToggleCurrency: (code: CurrencyCode) => void;
-  searchQuery: string;
-  onSearchChange: (q: string) => void;
+  onNavigateCity?: (city: SupportedCity | 'all', category: 'short_stay' | 'for_sale') => void;
+  onOpenAdmin?: () => void;
 }
+
+const NIGERIAN_CITIES: { id: SupportedCity; label: string; state: string }[] = [
+  { id: 'Lagos', label: 'Lagos', state: 'Ikoyi, VI & Lekki' },
+  { id: 'Abuja', label: 'Abuja', state: 'Maitama, Guzape & Wuse' },
+  { id: 'Port Harcourt', label: 'Port Harcourt', state: 'Old GRA & Trans-Amadi' },
+  { id: 'Ibadan', label: 'Ibadan', state: 'Bodija & Oluyole' },
+  { id: 'Edo', label: 'Edo', state: 'Benin City GRA' },
+  { id: 'Enugu', label: 'Enugu', state: 'Independence Layout' },
+  { id: 'Anambra', label: 'Anambra', state: 'Awka & Onitsha' },
+];
 
 export const Navbar: React.FC<NavbarProps> = ({
   savedCount,
@@ -45,383 +56,306 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenLegalGuide,
   onOpenContact,
   onOpenFaq,
-  currency,
-  onToggleCurrency,
-  searchQuery,
-  onSearchChange,
+  onNavigateCity,
+  onOpenAdmin,
 }) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const handleMenuAction = (action: () => void) => {
-    setIsMenuOpen(false);
-    action();
+  // Close drawer on escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsDrawerOpen(false);
+      }
+    };
+    if (isDrawerOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [isDrawerOpen]);
+
+  const handleAction = (callback?: () => void) => {
+    setIsDrawerOpen(false);
+    if (callback) {
+      callback();
+    }
+  };
+
+  const handleCitySelect = (city: SupportedCity, category: 'short_stay' | 'for_sale') => {
+    setIsDrawerOpen(false);
+    if (onNavigateCity) {
+      onNavigateCity(city, category);
+    }
   };
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 text-slate-900 transition-all duration-200 shadow-xs">
-        {/* Main Header Container */}
+      {/* Top Header Bar: Clean, Minimalist SaaS Aesthetic */}
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200/80 transition-all duration-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20 gap-3 sm:gap-4">
+          <div className="flex items-center justify-between h-20">
             
-            {/* Logo & Brand Identity */}
-            <div className="flex items-center gap-4 sm:gap-6">
-              <a href="#" className="flex items-center gap-3 group">
-                <div className="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-bold shadow-sm group-hover:scale-105 transition-all">
-                  <ShieldCheck className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-extrabold text-xl sm:text-2xl tracking-tight text-slate-900 leading-none">
-                    legit<span className="text-slate-700">properties</span>
-                  </span>
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500 mt-1">
-                    Verified Lands & Luxury Real Estate
-                  </span>
-                </div>
-              </a>
-            </div>
-
-            {/* Quick Search Bar in Navbar */}
-            <div className="hidden md:flex items-center flex-1 max-w-sm lg:max-w-md mx-4">
-              <div className="relative w-full">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder="Search Lekki, Ikoyi, Guzape, Epe, C of O..."
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all"
-                />
+            {/* Left Side: Legit Properties Logo */}
+            <a 
+              href="#" 
+              onClick={(e) => {
+                e.preventDefault();
+                if (onNavigateCity) {
+                  onNavigateCity('Lagos', 'short_stay');
+                } else {
+                  window.location.hash = '#/';
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+              className="flex items-center gap-3 group select-none"
+            >
+              <div className="w-10 h-10 rounded-xl bg-slate-950 text-white flex items-center justify-center font-bold shadow-xs group-hover:scale-105 transition-transform duration-200">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
               </div>
-            </div>
-
-            {/* Action Controls & Hamburger Button */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              
-              {/* Currency Selector (Desktop compact) */}
-              <div className="hidden sm:flex bg-slate-100 p-0.5 rounded-xl border border-slate-200">
-                <button
-                  onClick={() => onToggleCurrency('NGN')}
-                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                    currency === 'NGN'
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  ₦ NGN
-                </button>
-                <button
-                  onClick={() => onToggleCurrency('USD')}
-                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                    currency === 'USD'
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  $ USD
-                </button>
-                <button
-                  onClick={() => onToggleCurrency('GBP')}
-                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                    currency === 'GBP'
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  £ GBP
-                </button>
+              <div className="flex flex-col">
+                <div className="flex items-center tracking-tight">
+                  <span className="font-extrabold text-xl text-slate-950">legit</span>
+                  <span className="font-light text-xl text-slate-700">properties</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ml-1"></span>
+                </div>
+                <span className="text-[10px] uppercase font-bold tracking-widest text-slate-600 -mt-0.5">
+                  Verified Real Estate & Short Stays
+                </span>
               </div>
+            </a>
 
-              {/* Saved Bookmark Trigger */}
+            {/* Right Side: Single Clean Hamburger Menu Icon */}
+            <div className="flex items-center gap-2">
               <button
-                onClick={onOpenSaved}
-                className="relative p-2.5 sm:px-3 sm:py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                title="Saved Properties"
-              >
-                <Bookmark className="w-4 h-4 text-slate-500" />
-                <span className="hidden md:inline">Saved</span>
-                {savedCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-slate-900 text-white text-[10px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center shadow-xs">
-                    {savedCount}
-                  </span>
-                )}
-              </button>
-
-              {/* Request Property Lead CTA Button */}
-              <button
-                onClick={onOpenLeadModal}
-                className="hidden sm:flex px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>Request Property</span>
-              </button>
-
-              {/* Hamburger Menu Toggle Button */}
-              <button
-                onClick={() => setIsMenuOpen(true)}
-                className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-900 flex items-center gap-2 transition-all cursor-pointer shadow-xs focus:outline-none focus:ring-2 focus:ring-slate-900"
+                type="button"
+                onClick={() => setIsDrawerOpen(true)}
+                className="relative p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-900 hover:border-slate-300 transition-all duration-150 cursor-pointer shadow-2xs active:scale-95 flex items-center gap-2"
                 aria-label="Open Navigation Menu"
               >
-                <Menu className="w-5 h-5 text-slate-900" />
-                <span className="text-xs font-bold hidden xs:inline text-slate-800">Menu</span>
+                <Menu className="w-5 h-5 text-slate-800" />
+                {savedCount > 0 && (
+                  <span className="w-2 h-2 rounded-full bg-slate-950 animate-pulse" />
+                )}
               </button>
-
             </div>
 
           </div>
-
-          {/* Mobile Search Bar in Navbar */}
-          <div className="md:hidden pb-3">
-            <div className="relative w-full">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Search Lekki, Ikoyi, Guzape, C of O..."
-                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900"
-              />
-            </div>
-          </div>
-
         </div>
       </header>
 
-      {/* Hamburger Sliding Drawer Overlay */}
-      {isMenuOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
-            onClick={() => setIsMenuOpen(false)}
+      {/* Slide-over Drawer Backdrop & Panel */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop Blur */}
+          <div 
+            onClick={() => setIsDrawerOpen(false)}
+            className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in"
           />
 
-          {/* Slide-out Menu Panel */}
-          <div className="relative w-full max-w-md bg-white h-full shadow-2xl z-10 flex flex-col justify-between overflow-y-auto border-l border-slate-200 animate-in slide-in-from-right duration-300">
-            
-            {/* Header */}
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold">
-                  <ShieldCheck className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-slate-900 leading-tight">legitproperties</h3>
-                  <p className="text-[11px] font-semibold text-slate-500">Navigation & Verification Suite</p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setIsMenuOpen(false)}
-                className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-                aria-label="Close Menu"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Menu Sections */}
-            <div className="p-6 space-y-6 flex-1">
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+            <div className="w-screen max-w-md bg-white border-l border-slate-200 shadow-2xl flex flex-col justify-between overflow-y-auto transform transition-all duration-300 animate-in slide-in-from-right">
               
-              {/* Primary Services Group */}
-              <div className="space-y-2">
-                <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider px-1">
-                  Property Services
-                </h4>
-
-                <div className="space-y-1">
+              {/* Drawer Header */}
+              <div>
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-950 text-white flex items-center justify-center">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div>
+                      <div className="font-extrabold text-sm text-slate-950">legitproperties</div>
+                      <div className="text-[10px] text-slate-600 font-medium">Navigation & Portals</div>
+                    </div>
+                  </div>
                   <button
-                    onClick={() => handleMenuAction(onOpenTitleCheck)}
-                    className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 hover:bg-emerald-100/70 transition-all text-left group cursor-pointer"
+                    onClick={() => setIsDrawerOpen(false)}
+                    className="p-2 rounded-xl text-slate-500 hover:text-slate-950 hover:bg-slate-100 transition-colors cursor-pointer"
+                    aria-label="Close menu"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-                        <ShieldCheck className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
-                          <span>Free Land Title Verification</span>
-                          <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-600 text-white font-extrabold">Instant</span>
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Primary Destination Hubs: Short Stays */}
+                <div className="p-6 space-y-6">
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-3 flex items-center justify-between">
+                      <span>Short Stay Apartments</span>
+                      <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                        7 Nigerian Cities
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {NIGERIAN_CITIES.map((city) => (
+                        <button
+                          key={city.id}
+                          onClick={() => handleCitySelect(city.id, 'short_stay')}
+                          className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left group cursor-pointer border border-transparent hover:border-slate-100"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-slate-900 group-hover:text-white text-slate-600 flex items-center justify-center transition-colors">
+                              <MapPin className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-slate-900 group-hover:text-slate-950">
+                                Short Stay in {city.label}
+                              </div>
+                              <div className="text-[10px] text-slate-600">{city.state}</div>
+                            </div>
+                          </div>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-900 group-hover:translate-x-0.5 transition-all" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Properties for Sale Section */}
+                  <div className="pt-2 border-t border-slate-100">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-3">
+                      Verified Real Estate for Sale
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsDrawerOpen(false);
+                        if (onNavigateCity) {
+                          onNavigateCity('all', 'for_sale');
+                        }
+                      }}
+                      className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 transition-all text-left cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-slate-950 text-white flex items-center justify-center">
+                          <Building2 className="w-4 h-4 text-emerald-400" />
                         </div>
-                        <div className="text-[11px] text-emerald-800/80">Audit C of O, Governor's Consent & Gazettes</div>
+                        <div>
+                          <div className="text-xs font-bold text-slate-900">Properties for Sale</div>
+                          <div className="text-[11px] text-slate-600">Lands with C of O & Luxury Mansions</div>
+                        </div>
                       </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-emerald-600 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-
-                  <button
-                    onClick={() => handleMenuAction(onOpenLeadModal)}
-                    className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all text-left group cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs">
-                        <Sparkles className="w-4 h-4 text-amber-300" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-900">Custom Property Request</div>
-                        <div className="text-[11px] text-slate-500">Request specific land or luxury villa match</div>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-
-                  <button
-                    onClick={() => handleMenuAction(onOpenFilter)}
-                    className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all text-left group cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
-                        <SlidersHorizontal className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-900">Advanced Property Filters</div>
-                        <div className="text-[11px] text-slate-500">Filter by title doc, budget, city & type</div>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-
-                  <button
-                    onClick={() => handleMenuAction(onOpenDashboard)}
-                    className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all text-left group cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
-                        <User className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-900">Client Document Vault</div>
-                        <div className="text-[11px] text-slate-500">Saved inspection logs & deed repository</div>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Informational Guides & Resources */}
-              <div className="space-y-2">
-                <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider px-1">
-                  Information & Support
-                </h4>
-
-                <div className="space-y-1">
-                  <button
-                    onClick={() => handleMenuAction(onOpenAbout)}
-                    className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 text-left text-xs font-semibold text-slate-800 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Info className="w-4 h-4 text-slate-500" />
-                      <span>About legitproperties</span>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                  </button>
-
-                  <button
-                    onClick={() => handleMenuAction(onOpenLegalGuide)}
-                    className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 text-left text-xs font-semibold text-slate-800 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <BookOpen className="w-4 h-4 text-slate-500" />
-                      <span>Land Title Verification Guide</span>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                  </button>
-
-                  <button
-                    onClick={() => handleMenuAction(onOpenFaq)}
-                    className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 text-left text-xs font-semibold text-slate-800 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <HelpCircle className="w-4 h-4 text-slate-500" />
-                      <span>Buyer Frequently Asked Questions</span>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                  </button>
-
-                  <button
-                    onClick={() => handleMenuAction(onOpenContact)}
-                    className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 text-left text-xs font-semibold text-slate-800 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Phone className="w-4 h-4 text-slate-500" />
-                      <span>Contact & State Office Registry</span>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                  </button>
-
-                  <button
-                    onClick={() => handleMenuAction(() => {
-                      if (typeof window !== 'undefined') {
-                        window.location.hash = '#/admin';
-                      }
-                    })}
-                    className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 text-left text-xs font-semibold text-slate-800 transition-colors cursor-pointer border-t border-slate-100 mt-1"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                      <span>Admin CMS Portal</span>
-                    </div>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-white">Login</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Currency Selector (Mobile in drawer) */}
-              <div className="sm:hidden pt-2">
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                    <Globe className="w-4 h-4 text-slate-500" />
-                    <span>Display Currency</span>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                    </button>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      onClick={() => onToggleCurrency('NGN')}
-                      className={`py-2 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
-                        currency === 'NGN'
-                          ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      ₦ NGN
-                    </button>
-                    <button
-                      onClick={() => onToggleCurrency('USD')}
-                      className={`py-2 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
-                        currency === 'USD'
-                          ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      $ USD
-                    </button>
-                    <button
-                      onClick={() => onToggleCurrency('GBP')}
-                      className={`py-2 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
-                        currency === 'GBP'
-                          ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      £ GBP
-                    </button>
+
+                  {/* Utilities & Portals */}
+                  <div className="pt-2 border-t border-slate-100">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-3">
+                      Client Services & Tools
+                    </div>
+                    <div className="space-y-1.5">
+                      <button
+                        onClick={() => handleAction(onOpenSaved)}
+                        className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 text-left text-xs font-semibold text-slate-800 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Bookmark className="w-4 h-4 text-slate-500" />
+                          <span>Saved Listings</span>
+                        </div>
+                        {savedCount > 0 ? (
+                          <span className="px-2 py-0.5 bg-slate-950 text-white text-[10px] font-bold rounded-full">
+                            {savedCount}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-slate-600">0</span>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => handleAction(onOpenLeadModal)}
+                        className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 text-left text-xs font-semibold text-slate-800 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Sparkles className="w-4 h-4 text-amber-500" />
+                          <span>Request Custom Property</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Concierge</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleAction(onOpenTitleCheck)}
+                        className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 text-left text-xs font-semibold text-slate-800 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          <span>Title Verification Audit</span>
+                        </div>
+                        <span className="text-[10px] text-slate-600">Legal Check</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleAction(onOpenDashboard)}
+                        className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 text-left text-xs font-semibold text-slate-800 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Layers className="w-4 h-4 text-slate-500" />
+                          <span>Client Portfolio Portal</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Guides & Support */}
+                  <div className="pt-2 border-t border-slate-100">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-3">
+                      Resources & Company
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <button
+                        onClick={() => handleAction(onOpenAbout)}
+                        className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-left text-slate-700 font-medium transition-colors cursor-pointer"
+                      >
+                        About Us
+                      </button>
+                      <button
+                        onClick={() => handleAction(onOpenLegalGuide)}
+                        className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-left text-slate-700 font-medium transition-colors cursor-pointer"
+                      >
+                        Legal Guide
+                      </button>
+                      <button
+                        onClick={() => handleAction(onOpenFaq)}
+                        className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-left text-slate-700 font-medium transition-colors cursor-pointer"
+                      >
+                        FAQs
+                      </button>
+                      <button
+                        onClick={() => handleAction(onOpenContact)}
+                        className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-left text-slate-700 font-medium transition-colors cursor-pointer"
+                      >
+                        Contact Concierge
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
 
-            </div>
-
-            {/* Drawer Footer */}
-            <div className="p-6 border-t border-slate-100 bg-slate-50/50 space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>100% C of O & Governor's Consent Audited</span>
+              {/* Drawer Footer: Admin Access Button */}
+              <div className="p-6 border-t border-slate-200 bg-slate-50/70">
+                <button
+                  onClick={() => {
+                    setIsDrawerOpen(false);
+                    if (onOpenAdmin) {
+                      onOpenAdmin();
+                    } else {
+                      window.location.hash = '#/admin';
+                    }
+                  }}
+                  className="w-full py-3 px-4 bg-slate-950 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                >
+                  <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Admin Sign In & Dashboard</span>
+                </button>
+                <p className="text-[10px] text-center text-slate-600 mt-2">
+                  Legit Properties Nigeria · 100% Title Verified & Inspected
+                </p>
               </div>
-              <div className="text-[11px] text-slate-500 leading-tight">
-                All legal verifications are carried out directly with the Lagos State Lands Bureau (Alausa), AGIS Abuja, and Rivers State Ministry of Lands.
-              </div>
-            </div>
 
+            </div>
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useState } from 'react';
+import React, { useRef, useMemo, useState, useEffect } from 'react';
 import {
   MapPin,
   Phone,
@@ -13,9 +13,11 @@ import {
   Eye,
   CheckCircle2,
   ArrowRight,
-  Filter
+  Filter,
+  Loader2
 } from 'lucide-react';
 import { Property, SupportedCity, ListingType } from '../../types';
+import { fetchPropertiesFromSupabase } from '../../lib/supabase';
 
 interface LocalizedLandingPageProps {
   currentCategory: 'short_stay' | 'for_sale';
@@ -137,9 +139,45 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
     listingsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  // Direct live Supabase fetching for this localized landing page
+  const [liveProperties, setLiveProperties] = useState<Property[]>([]);
+  const [isLoadingLive, setIsLoadingLive] = useState<boolean>(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingLive(true);
+
+    const queryLocation = currentCity === 'all' ? undefined : currentCity;
+    fetchPropertiesFromSupabase({
+      location: queryLocation,
+      listing_type: currentCategory
+    }).then((data) => {
+      if (isMounted) {
+        setLiveProperties(data);
+        setIsLoadingLive(false);
+      }
+    }).catch((err) => {
+      console.error('Error fetching live properties from Supabase for', currentCity, err);
+      if (isMounted) {
+        setLiveProperties([]);
+        setIsLoadingLive(false);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentCity, currentCategory]);
+
+  // Combine live query results with any parent properties
+  const activePropertiesPool = useMemo(() => {
+    if (liveProperties.length > 0) return liveProperties;
+    return properties || [];
+  }, [liveProperties, properties]);
+
   // Filter listings based on category and city
   const filteredListings = useMemo(() => {
-    return properties.filter((p) => {
+    return activePropertiesPool.filter((p) => {
       // Category / Listing Type matching
       if (currentCategory === 'short_stay') {
         const isShortStay =
@@ -180,7 +218,7 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
       if (sortBy === 'price_high') return b.priceNgn - a.priceNgn;
       return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
     });
-  }, [properties, currentCategory, currentCity, selectedNeighborhood, sortBy]);
+  }, [activePropertiesPool, currentCategory, currentCity, selectedNeighborhood, sortBy]);
 
   const targetCities: SupportedCity[] = [
     'Lagos',
@@ -406,15 +444,26 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
         </div>
 
         {/* Listings Grid */}
-        {filteredListings.length === 0 ? (
+        {isLoadingLive ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 py-6">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="bg-slate-50 rounded-3xl p-4 border border-slate-200 animate-pulse space-y-4">
+                <div className="aspect-[16/10] bg-slate-200 rounded-2xl" />
+                <div className="h-5 bg-slate-200 rounded-md w-3/4" />
+                <div className="h-4 bg-slate-200 rounded-md w-1/2" />
+                <div className="h-10 bg-slate-200 rounded-xl" />
+              </div>
+            ))}
+          </div>
+        ) : filteredListings.length === 0 ? (
           <div className="py-20 text-center bg-slate-50 border border-slate-200 rounded-3xl p-8 space-y-4 max-w-xl mx-auto">
             <Building2 className="w-12 h-12 text-slate-400 mx-auto" />
             <div className="space-y-1">
               <h3 className="text-lg font-bold text-slate-900">
-                Fresh Listings for {currentCity} Loading Soon
+                Fresh Listings for {currentCity === 'all' ? 'Selected Category' : currentCity} Coming Soon
               </h3>
               <p className="text-xs text-slate-600">
-                Our verification team is auditing new properties in this sector. You can submit a custom inquiry or view short stays in other locations.
+                Live properties from Supabase for {currentCity === 'all' ? 'Nigeria' : currentCity} will appear here as soon as verified by the admin desk.
               </p>
             </div>
             <div className="flex items-center justify-center gap-3 pt-2">
@@ -428,7 +477,7 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
                 onClick={() => setSelectedNeighborhood('all')}
                 className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
               >
-                Reset Neighborhood Filter
+                Reset Filter
               </button>
             </div>
           </div>

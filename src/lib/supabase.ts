@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 import { Property, PropertyRequestLead, AdminUser, BlogPost, PropertyType, BookingRequest, BookingStatus } from '../types';
-import { INITIAL_PROPERTIES } from '../data/properties';
 
 const LIVE_SUPABASE_URL = 'https://tpzbgjvhrciszctpzjxd.supabase.co';
 const LIVE_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwemJnanZocmNpc3pjdHB6anhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1Mzk3MjIsImV4cCI6MjEwMjExNTcyMn0.OEEFJOZQEga87JVLKdA25UjCThfzNl48A51jdMpUU-A';
@@ -527,22 +526,48 @@ export async function getCurrentAdminUser(fallbackUser?: any): Promise<AdminUser
  */
 
 /**
- * Fetch properties from Supabase `properties` table, or fall back to local seed data.
+ * ============================================================================
+ * PROPERTIES CRUD (Real-Time Live Supabase Integration)
+ * ============================================================================
  */
-export async function fetchPropertiesFromSupabase(): Promise<Property[]> {
+
+export interface PropertyQueryFilters {
+  location?: string;
+  listing_type?: 'short_stay' | 'for_sale';
+}
+
+/**
+ * Fetch properties dynamically in real-time from the live Supabase `properties` table.
+ * Strictly returns live data matching location and listing_type filters.
+ * Returns empty array [] if no records exist (zero mock data).
+ */
+export async function fetchPropertiesFromSupabase(filters?: PropertyQueryFilters): Promise<Property[]> {
   if (!supabase) {
-    return INITIAL_PROPERTIES;
+    return [];
   }
 
   try {
-    let { data, error } = await supabase
-      .from('properties')
-      .select('*')
-      .order('created_at', { ascending: false });
+    let query = supabase.from('properties').select('*');
+
+    // 1. Filter by listing_type if specified
+    if (filters?.listing_type) {
+      if (filters.listing_type === 'short_stay') {
+        query = query.or('property_type.eq.short_stay,description.ilike.%short stay%,description.ilike.%shortlet%,title.ilike.%short stay%');
+      } else if (filters.listing_type === 'for_sale') {
+        query = query.or('property_type.neq.short_stay,property_type.eq.for_sale,property_type.eq.land,property_type.eq.apartment,property_type.eq.house');
+      }
+    }
+
+    // 2. Filter by location if specified
+    if (filters?.location && filters.location !== 'all') {
+      query = query.ilike('location', `%${filters.location}%`);
+    }
+
+    let { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
-      console.warn('Ordering by created_at skipped, falling back to direct select:', error.message);
-      const fallback = await supabase.from('properties').select('*');
+      console.warn('Supabase order by created_at warning, falling back to direct select:', error.message);
+      const fallback = await query;
       data = fallback.data;
       error = fallback.error;
     }
@@ -553,15 +578,15 @@ export async function fetchPropertiesFromSupabase(): Promise<Property[]> {
         details: error.details,
         code: error.code
       });
-      return INITIAL_PROPERTIES;
+      return [];
     }
 
     if (!data || data.length === 0) {
-      return INITIAL_PROPERTIES;
+      return [];
     }
 
     return data.map((item) => {
-      const mainImg = item.property_image || (Array.isArray(item.gallery_images) && item.gallery_images[0]) || (Array.isArray(item.images) && item.images[0]) || 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80';
+      const mainImg = item.property_image || (Array.isArray(item.gallery_images) && item.gallery_images[0]) || (Array.isArray(item.images) && item.images[0]) || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80';
       const gallery = Array.isArray(item.gallery_images) && item.gallery_images.length > 0
         ? item.gallery_images
         : (Array.isArray(item.images) && item.images.length > 0 ? item.images : [mainImg]);
@@ -673,7 +698,7 @@ export async function fetchPropertiesFromSupabase(): Promise<Property[]> {
     });
   } catch (err) {
     console.error('Error fetching properties from Supabase:', err);
-    return INITIAL_PROPERTIES;
+    return [];
   }
 }
 
@@ -737,9 +762,9 @@ function formatSupabaseError(error: any, activeUser?: any): string {
 
   if (isRlsError) {
     if (!activeUser) {
-      fullErrorString += ' — (RLS Violation: No active Supabase Auth session detected. Please sign in via the Admin Login page to include an authenticated user JWT in the request).';
+      fullErrorString += ' — (RLS Violation: Supabase rejected insert/update because no authenticated user session was sent. To enable writes, run: ALTER TABLE public.properties ENABLE ROW LEVEL SECURITY; CREATE POLICY "Allow all writes" ON public.properties FOR ALL USING (true); in your Supabase SQL Editor).';
     } else {
-      fullErrorString += ` — (RLS Violation: Active user is ${activeUser.email || activeUser.id}. Please verify that your Supabase RLS policy allows INSERT/UPDATE on table 'properties' for this user role).`;
+      fullErrorString += ` — (RLS Violation: Active user is ${activeUser.email || activeUser.id}. Verify your Supabase RLS policy allows INSERT/UPDATE on table 'properties' for authenticated users).`;
     }
   }
 
@@ -748,10 +773,8 @@ function formatSupabaseError(error: any, activeUser?: any): string {
 
 /**
  * Save / update property in Supabase `properties` table.
- * 1. Strictly maps payload to exact database columns:
- *    (id, title, description, price, location, property_type, whatsapp_number, call_number, property_image, gallery_images).
- * 2. Excludes non-existent schema columns like `amenities` to prevent PostgREST PGRST204 schema cache errors.
- * 3. Explicitly logs error.message and error.details to console on failure.
+ * Submits live insert/update query ensuring all required fields save correctly:
+ * (title, description, listing type, location, price, price unit, WhatsApp number, call number, main image URL, and the 4 gallery image URLs).
  */
 export async function savePropertyToSupabase(property: Partial<Property>): Promise<{ success: boolean; data?: any; error?: string; errorDetails?: string; rawError?: any }> {
   if (!supabase) {
@@ -775,7 +798,6 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
     }
 
     // 2. Strict mapping of frontend form state to exact Supabase database table columns:
-    // (id, title, description, price, location, property_type, whatsapp_number, call_number, property_image, gallery_images)
     const rawPrice = property.priceNgn ?? (property as any).price ?? 0;
     const numericPrice = typeof rawPrice === 'number' ? rawPrice : Number(rawPrice) || 0;
 
@@ -788,22 +810,24 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
 
     const mainImage = Array.isArray(property.images) && property.images.length > 0
       ? property.images[0]
-      : (property.property_image || 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80');
+      : (property.property_image || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80');
 
-    const galleryImages = Array.isArray(property.images) && property.images.length > 0
-      ? property.images
-      : (property.gallery_images || [mainImage]);
+    const galleryImages = Array.isArray(property.gallery_images) && property.gallery_images.length > 0
+      ? property.gallery_images
+      : (Array.isArray(property.images) && property.images.length > 0 ? property.images : [mainImage]);
 
-    const propertyType = property.property_type || property.type || 'land';
+    const listingType = property.listing_type || (property.property_type === 'short_stay' ? 'short_stay' : 'for_sale');
+    const priceUnit = property.price_unit || (listingType === 'short_stay' ? 'per_night' : 'total');
+    const propertyType = listingType === 'short_stay' ? 'short_stay' : (property.property_type || 'for_sale');
+
     const whatsappNum = property.whatsappNumber || (property as any).whatsapp_number || '+2348030000000';
     const callNum = property.callNumber || (property as any).call_number || '+2348030000000';
     const propertyVideo = (property.property_video || property.virtualTourUrl || '').trim() || null;
     const rawAvailability = property.property_availability || (property as any).availability || 'available';
     const propertyAvailability = rawAvailability === 'sold' ? 'sold' : 'available';
 
-    // Exact database payload matching the table schema:
-    // (id, title, description, price, location, property_type, whatsapp_number, call_number, property_image, gallery_images, property_video, property_availability)
-    const dbPayload: Record<string, any> = {
+    // Base verified database payload matching confirmed table schema:
+    const basePayload: Record<string, any> = {
       title: safeTitle,
       description: safeDescription,
       price: numericPrice,
@@ -817,24 +841,41 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
       property_availability: propertyAvailability
     };
 
+    // Extended payload including listing_type and price_unit (if schema has been upgraded)
+    const extendedPayload: Record<string, any> = {
+      ...basePayload,
+      listing_type: listingType,
+      price_unit: priceUnit
+    };
+
     if (property.id && !property.id.startsWith('temp-')) {
       // Update existing property
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('properties')
-        .update(dbPayload)
+        .update(extendedPayload)
         .eq('id', property.id)
         .select();
 
+      // If schema cache does not have listing_type or price_unit, retry with basePayload
+      if (error && error.code === 'PGRST204') {
+        console.warn('Retrying update with base payload without extended columns:', error.message);
+        const retry = await supabase
+          .from('properties')
+          .update(basePayload)
+          .eq('id', property.id)
+          .select();
+        data = retry.data;
+        error = retry.error;
+      }
+
       if (error) {
-        // Explicitly log the exact Supabase error (message, details, code, hint)
         console.error('Supabase Property Update Failed:', {
           message: error.message,
           details: error.details,
           hint: error.hint,
           code: error.code,
-          payload: dbPayload
+          payload: basePayload
         });
-        console.error(`[Supabase Error Details] Message: ${error.message} | Details: ${error.details || 'None'} | Code: ${error.code || 'None'}`);
 
         const formattedErr = formatSupabaseError(error, user);
         return { 
@@ -847,21 +888,30 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
       return { success: true, data };
     } else {
       // Insert new property
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('properties')
-        .insert([dbPayload])
+        .insert([extendedPayload])
         .select();
 
+      // If schema cache does not have listing_type or price_unit, retry with basePayload
+      if (error && error.code === 'PGRST204') {
+        console.warn('Retrying insert with base payload without extended columns:', error.message);
+        const retry = await supabase
+          .from('properties')
+          .insert([basePayload])
+          .select();
+        data = retry.data;
+        error = retry.error;
+      }
+
       if (error) {
-        // Explicitly log the exact Supabase error (message, details, code, hint)
         console.error('Supabase Property Insert Failed:', {
           message: error.message,
           details: error.details,
           hint: error.hint,
           code: error.code,
-          payload: dbPayload
+          payload: basePayload
         });
-        console.error(`[Supabase Error Details] Message: ${error.message} | Details: ${error.details || 'None'} | Code: ${error.code || 'None'}`);
 
         const formattedErr = formatSupabaseError(error, user);
         return { 
