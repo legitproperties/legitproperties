@@ -28,18 +28,8 @@ interface AdminAuthContextType {
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
 export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [admin, setAdmin] = useState<AdminUser | null>(() => {
-    try {
-      const stored = localStorage.getItem('legit_admin_user');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed?.email === 'goshened76@gmail.com') {
-          return parsed;
-        }
-      }
-    } catch {}
-    return null;
-  });
+  // Pure live session state - zero localStorage mock bypasses
+  const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [session, setSession] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -96,20 +86,9 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             }
           }
         } else {
-          try {
-            const stored = localStorage.getItem('legit_admin_user');
-            if (stored) {
-              const parsed = JSON.parse(stored);
-              if (parsed?.email === 'goshened76@gmail.com') {
-                if (isMounted) setAdmin(parsed);
-              } else {
-                if (isMounted) setAdmin(null);
-              }
-            } else {
-              if (isMounted) setAdmin(null);
-            }
-          } catch {
-            if (isMounted) setAdmin(null);
+          if (isMounted) {
+            setSession(null);
+            setAdmin(null);
           }
         }
       } catch (e) {
@@ -136,7 +115,7 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           const email = (newSession.user.email || '').trim().toLowerCase();
           if (email === 'goshened76@gmail.com') {
             const profile = await getCurrentAdminUser(newSession.user);
-            if (isMounted) {
+            if (isMounted && profile) {
               setSession(newSession);
               setAdmin(profile);
             }
@@ -180,7 +159,7 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setAdmin(null);
         return { 
           success: false, 
-          error: error || 'Authentication failed. Please verify your credentials.', 
+          error: error || 'Authentication failed. Please check your credentials.', 
           errorCode 
         };
       }

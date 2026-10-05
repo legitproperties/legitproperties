@@ -5,7 +5,7 @@ const LIVE_SUPABASE_URL = 'https://tpzbgjvhrciszctpzjxd.supabase.co';
 const LIVE_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwemJnanZocmNpc3pjdHB6anhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1Mzk3MjIsImV4cCI6MjEwMjExNTcyMn0.OEEFJOZQEga87JVLKdA25UjCThfzNl48A51jdMpUU-A';
 
 /**
- * Retrieve Supabase Configuration from either localStorage or Environment variables.
+ * Retrieve Supabase Configuration from Environment variables (Vite / Next.js / Vercel) or localStorage.
  */
 function getActiveSupabaseConfig() {
   let customUrl: string | null = null;
@@ -18,9 +18,28 @@ function getActiveSupabaseConfig() {
     }
   } catch {}
 
-  const metaEnv = (import.meta as unknown as { env?: Record<string, string> }).env || {};
-  const envUrl = (import.meta.env?.VITE_SUPABASE_URL || metaEnv.VITE_SUPABASE_URL || '').trim();
-  const envKey = (import.meta.env?.VITE_SUPABASE_ANON_KEY || metaEnv.VITE_SUPABASE_ANON_KEY || '').trim();
+  const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as any).env) || {};
+  const processEnv = (typeof process !== 'undefined' && process.env) || {};
+
+  const envUrl = (
+    metaEnv.NEXT_PUBLIC_SUPABASE_URL ||
+    processEnv.NEXT_PUBLIC_SUPABASE_URL ||
+    metaEnv.VITE_SUPABASE_URL ||
+    processEnv.VITE_SUPABASE_URL ||
+    ''
+  ).trim();
+
+  const envKey = (
+    metaEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    processEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    metaEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    processEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    metaEnv.VITE_SUPABASE_ANON_KEY ||
+    processEnv.VITE_SUPABASE_ANON_KEY ||
+    metaEnv.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    processEnv.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    ''
+  ).trim();
 
   const activeUrl = (customUrl && customUrl.trim()) || envUrl || LIVE_SUPABASE_URL;
   const activeKey = (customKey && customKey.trim()) || envKey || LIVE_SUPABASE_ANON_KEY;
@@ -108,7 +127,7 @@ export async function adminSignUp(
 /**
  * Strict Sign in with Supabase Auth (`supabase.auth.signInWithPassword`).
  * - Directly calls Supabase Auth without any fallback or mock bypass.
- * - Rejects any authentication failures immediately with secure error messages.
+ * - Rejects any authentication failures immediately with authentic Supabase error messages.
  * - Enforces that the authenticated user email strictly matches 'goshened76@gmail.com'.
  * - If unauthorized email, immediately invokes `supabase.auth.signOut()` and returns access denied.
  */
@@ -127,81 +146,69 @@ export async function adminSignIn(
     return { session: null, user: null, error: 'Please enter your password.', errorCode: 'EMPTY_PASSWORD' };
   }
 
-  // Strictly enforce that only goshened76@gmail.com can log in as administrator
-  if (cleanEmail !== 'goshened76@gmail.com') {
-    if (supabase) {
-      try {
-        await supabase.auth.signOut();
-      } catch {}
-    }
-    return {
-      session: null,
-      user: null,
-      error: 'Access denied. Only goshened76@gmail.com is authorized to access the administrator console.',
-      errorCode: 'UNAUTHORIZED_EMAIL'
-    };
+  if (!supabase) {
+    return { session: null, user: null, error: 'Supabase client is not initialized.', errorCode: 'NO_CLIENT' };
   }
 
   try {
-    let authSession: any = null;
-    let authUser: any = null;
+    // 1. Direct, authentic Supabase Auth call - Zero mock/demo fallbacks
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email: cleanEmail,
+      password: cleanPassword
+    });
 
-    if (supabase) {
-      try {
-        const { data, error: authError } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password: cleanPassword
-        });
-
-        if (data?.session && data?.user) {
-          authSession = data.session;
-          authUser = data.user;
-        } else if (authError) {
-          console.warn('Supabase auth response note for goshened76@gmail.com:', authError.message);
-        }
-      } catch (sbErr) {
-        console.warn('Supabase signInWithPassword note:', sbErr);
-      }
+    if (authError || !data?.session || !data?.user) {
+      return { 
+        session: null, 
+        user: null, 
+        error: authError?.message || 'Invalid login credentials.', 
+        errorCode: authError?.status ? String(authError.status) : 'AUTH_FAILED' 
+      };
     }
 
-    // Retrieve admin record from admins table if available
-    let adminRecord: any = null;
-    if (supabase) {
+    const authenticatedEmail = (data.user.email || '').trim().toLowerCase();
+
+    // 2. Strict authorization enforcement: ONLY goshened76@gmail.com
+    if (authenticatedEmail !== 'goshened76@gmail.com') {
+      await supabase.auth.signOut();
       try {
-        const { data: record } = await supabase
-          .from('admins')
-          .select('*')
-          .eq('email', cleanEmail)
-          .maybeSingle();
+        localStorage.removeItem('legit_admin_user');
+      } catch {}
+
+      return {
+        session: null,
+        user: null,
+        error: 'Unauthorized Account: Access is restricted to authorized administrators only.',
+        errorCode: 'UNAUTHORIZED_EMAIL'
+      };
+    }
+
+    // 3. Query admins table if present to verify user record / roles
+    let adminRecord: any = null;
+    try {
+      const { data: record, error: dbErr } = await supabase
+        .from('admins')
+        .select('*')
+        .eq('email', authenticatedEmail)
+        .maybeSingle();
+
+      if (!dbErr && record) {
         adminRecord = record;
-      } catch (dbErr) {
-        console.warn('Admins table lookup notice:', dbErr);
       }
+    } catch (dbErr) {
+      console.warn('Admins table lookup notice:', dbErr);
     }
 
     const verifiedAdmin: AdminUser = {
-      id: authUser?.id || adminRecord?.id || '99669405-4dde-4109-93ad-5e06d82fd776',
-      name: adminRecord?.name || authUser?.user_metadata?.name || 'Odu Favour',
-      email: cleanEmail,
-      role: 'admin',
-      created_at: adminRecord?.created_at || authUser?.created_at || new Date().toISOString()
+      id: data.user.id,
+      name: adminRecord?.name || data.user.user_metadata?.name || 'Odu Favour',
+      email: authenticatedEmail,
+      role: adminRecord?.role || 'admin',
+      created_at: adminRecord?.created_at || data.user.created_at || new Date().toISOString()
     };
-
-    const finalSession = authSession || {
-      access_token: 'verified_admin_session',
-      user: {
-        id: verifiedAdmin.id,
-        email: cleanEmail,
-        user_metadata: { name: verifiedAdmin.name, role: 'admin' }
-      }
-    };
-
-    try {
-      localStorage.setItem('legit_admin_user', JSON.stringify(verifiedAdmin));
-    } catch {}
 
     return { 
-      session: finalSession, 
+      session: data.session, 
       user: verifiedAdmin, 
       error: null 
     };
@@ -306,15 +313,6 @@ export async function getCurrentAdminUser(fallbackUser?: any): Promise<AdminUser
     }
 
     if (!authUser) {
-      try {
-        const stored = localStorage.getItem('legit_admin_user');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed && parsed.email === 'goshened76@gmail.com') {
-            return parsed;
-          }
-        }
-      } catch {}
       return null;
     }
 
