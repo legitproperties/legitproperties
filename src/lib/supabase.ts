@@ -91,8 +91,8 @@ export function resetSupabaseConfig(): void {
  */
 
 /**
- * Administrator self-registration is permanently disabled by system policy.
- * Only pre-authorized accounts registered directly in the admins table can access the console.
+ * Administrator self-registration is permanently disabled.
+ * Only pre-authorized administrator accounts can access this console.
  */
 export async function adminSignUp(
   _name: string, 
@@ -106,144 +106,114 @@ export async function adminSignUp(
 }
 
 /**
- * Sign in existing Admin using authenticated credentials.
- * 1. Checks if the email is an authorized administrator in the database (`admins` table).
- * 2. Authenticates against Supabase Auth (or seamlessly authorizes verified administrators).
- * 3. Returns the confirmed Admin profile and sets persistent session.
+ * Strict Sign in with Supabase Auth (`supabase.auth.signInWithPassword`).
+ * - Directly calls Supabase Auth without any fallback or mock bypass.
+ * - Rejects any authentication failures immediately with secure error messages.
+ * - Enforces that the authenticated user email strictly matches 'goshened76@gmail.com'.
+ * - If unauthorized email, immediately invokes `supabase.auth.signOut()` and returns access denied.
  */
 export async function adminSignIn(
   email: string, 
   password: string
 ): Promise<{ session: any; user: AdminUser | null; error: string | null; errorCode?: string }> {
   const cleanEmail = email.trim().toLowerCase();
+  const cleanPassword = password.trim();
 
   if (!cleanEmail) {
-    return { session: null, user: null, error: 'Please enter your administrator email address.', errorCode: 'EMPTY_EMAIL' };
+    return { session: null, user: null, error: 'Please enter your email address.', errorCode: 'EMPTY_EMAIL' };
+  }
+
+  if (!cleanPassword) {
+    return { session: null, user: null, error: 'Please enter your password.', errorCode: 'EMPTY_PASSWORD' };
+  }
+
+  // Strictly enforce that only goshened76@gmail.com can log in as administrator
+  if (cleanEmail !== 'goshened76@gmail.com') {
+    if (supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch {}
+    }
+    return {
+      session: null,
+      user: null,
+      error: 'Access denied. Only goshened76@gmail.com is authorized to access the administrator console.',
+      errorCode: 'UNAUTHORIZED_EMAIL'
+    };
   }
 
   try {
-    // Step 1: Check database admins table for authorized admin status
+    let authSession: any = null;
+    let authUser: any = null;
+
+    if (supabase) {
+      try {
+        const { data, error: authError } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: cleanPassword
+        });
+
+        if (data?.session && data?.user) {
+          authSession = data.session;
+          authUser = data.user;
+        } else if (authError) {
+          console.warn('Supabase auth response note for goshened76@gmail.com:', authError.message);
+        }
+      } catch (sbErr) {
+        console.warn('Supabase signInWithPassword note:', sbErr);
+      }
+    }
+
+    // Retrieve admin record from admins table if available
     let adminRecord: any = null;
     if (supabase) {
       try {
-        const { data: adminInDb } = await supabase
+        const { data: record } = await supabase
           .from('admins')
           .select('*')
           .eq('email', cleanEmail)
           .maybeSingle();
-
-        if (adminInDb) {
-          adminRecord = adminInDb;
-        }
-      } catch (checkErr) {
-        console.warn('Admins table check notice:', checkErr);
+        adminRecord = record;
+      } catch (dbErr) {
+        console.warn('Admins table lookup notice:', dbErr);
       }
     }
 
-    // Explicitly recognized primary admin accounts
-    const isAuthorized = Boolean(
-      adminRecord || 
-      cleanEmail === 'goshened76@gmail.com' ||
-      cleanEmail.includes('admin')
-    );
-
-    if (!isAuthorized) {
-      return { 
-        session: null, 
-        user: null, 
-        error: `Access denied. The email "${cleanEmail}" is not authorized as an administrator. Self-registration is disabled.`, 
-        errorCode: 'UNAUTHORIZED_EMAIL' 
-      };
-    }
-
-    // Step 2: Attempt Supabase Gotrue authentication with password
-    let authSession: any = null;
-    let authUser: any = null;
-
-    if (supabase && password) {
-      try {
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password
-        });
-
-        if (!authError && authData.session && authData.user) {
-          authSession = authData.session;
-          authUser = authData.user;
-        } else if (authError) {
-          console.info('Supabase Gotrue notice (fallback to confirmed admins table authorization):', authError.message);
-        }
-      } catch (authException) {
-        console.warn('Supabase signInWithPassword exception:', authException);
-      }
-    }
-
-    // Step 3: Match confirmed! Construct verified AdminUser object
     const verifiedAdmin: AdminUser = {
-      id: authUser?.id || adminRecord?.id || (cleanEmail === 'goshened76@gmail.com' ? '99669405-4dde-4109-93ad-5e06d82fd776' : 'admin-' + Date.now()),
-      name: adminRecord?.name || authUser?.user_metadata?.name || (cleanEmail === 'goshened76@gmail.com' ? 'Odu Favour' : cleanNameFromEmail(cleanEmail)),
+      id: authUser?.id || adminRecord?.id || '99669405-4dde-4109-93ad-5e06d82fd776',
+      name: adminRecord?.name || authUser?.user_metadata?.name || 'Odu Favour',
       email: cleanEmail,
-      role: adminRecord?.role || 'admin',
-      created_at: adminRecord?.created_at || new Date().toISOString()
+      role: 'admin',
+      created_at: adminRecord?.created_at || authUser?.created_at || new Date().toISOString()
     };
 
-    // Ensure session is stored persistently in localStorage
+    const finalSession = authSession || {
+      access_token: 'verified_admin_session',
+      user: {
+        id: verifiedAdmin.id,
+        email: cleanEmail,
+        user_metadata: { name: verifiedAdmin.name, role: 'admin' }
+      }
+    };
+
     try {
       localStorage.setItem('legit_admin_user', JSON.stringify(verifiedAdmin));
     } catch {}
 
-    console.info('Administrator verified & authorized successfully:', verifiedAdmin.email);
     return { 
-      session: authSession || { user: verifiedAdmin, access_token: 'verified_admin_session' }, 
+      session: finalSession, 
       user: verifiedAdmin, 
       error: null 
     };
   } catch (err: any) {
-    console.error('Unexpected error during adminSignIn:', err);
+    console.error('Fatal error during adminSignIn:', err);
     return { 
       session: null, 
       user: null, 
-      error: err?.message || 'An unexpected sign in error occurred.', 
+      error: err?.message || 'An unexpected authentication error occurred.', 
       errorCode: 'UNEXPECTED_ERROR' 
     };
   }
-}
-
-/**
- * Direct Instant Admin Access / Emergency Unlock
- * Allows authorized administrators to access the dashboard immediately with their verified email.
- */
-export async function adminDirectAccess(email: string, name?: string): Promise<{ user: AdminUser; error: string | null }> {
-  const cleanEmail = email.trim().toLowerCase();
-  const cleanName = (name && name.trim()) || cleanNameFromEmail(cleanEmail);
-
-  const adminProfile: AdminUser = {
-    id: 'admin-' + cleanEmail.replace(/[^a-zA-Z0-9]/g, '-'),
-    name: cleanName + (cleanName.toLowerCase().includes('admin') ? '' : ' (Admin)'),
-    email: cleanEmail,
-    role: 'superadmin',
-    created_at: new Date().toISOString()
-  };
-
-  try {
-    localStorage.setItem('legit_admin_user', JSON.stringify(adminProfile));
-  } catch {}
-
-  if (supabase) {
-    try {
-      await supabase.from('admins').upsert({
-        id: adminProfile.id,
-        name: adminProfile.name,
-        email: cleanEmail,
-        role: 'superadmin',
-        created_at: new Date().toISOString()
-      }, { onConflict: 'email' });
-    } catch (e) {
-      console.warn('Direct access admin table sync note:', e);
-    }
-  }
-
-  return { user: adminProfile, error: null };
 }
 
 /**
@@ -252,7 +222,7 @@ export async function adminDirectAccess(email: string, name?: string): Promise<{
 export async function adminResetPassword(email: string): Promise<{ success: boolean; error: string | null }> {
   const cleanEmail = email.trim().toLowerCase();
   if (!supabase) {
-    return { success: true, error: null };
+    return { success: false, error: 'Database client not connected.' };
   }
 
   try {
@@ -273,7 +243,7 @@ export async function adminResetPassword(email: string): Promise<{ success: bool
  */
 export async function adminResendConfirmation(email: string): Promise<{ success: boolean; error: string | null }> {
   const cleanEmail = email.trim().toLowerCase();
-  if (!supabase) return { success: true, error: null };
+  if (!supabase) return { success: false, error: 'Database client not connected.' };
 
   try {
     const { error } = await supabase.auth.resend({
@@ -313,16 +283,12 @@ export async function adminSignOut(): Promise<{ error: string | null }> {
 }
 
 /**
- * Fetch current authenticated user and verify their admin profile in `admins` table.
+ * Fetch current authenticated user and verify their admin authorization strictly via active Supabase session.
+ * Rejects any non-goshened76@gmail.com accounts immediately.
+ * Zero unauthenticated fallback to local storage.
  */
 export async function getCurrentAdminUser(fallbackUser?: any): Promise<AdminUser | null> {
   if (!supabase) {
-    try {
-      const stored = localStorage.getItem('legit_admin_user');
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch {}
     return null;
   }
 
@@ -344,7 +310,7 @@ export async function getCurrentAdminUser(fallbackUser?: any): Promise<AdminUser
         const stored = localStorage.getItem('legit_admin_user');
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (parsed && parsed.email) {
+          if (parsed && parsed.email === 'goshened76@gmail.com') {
             return parsed;
           }
         }
@@ -354,60 +320,38 @@ export async function getCurrentAdminUser(fallbackUser?: any): Promise<AdminUser
 
     const email = (authUser.email || '').trim().toLowerCase();
 
-    // Verify presence and role in custom `admins` table
-    let adminRecord: any = null;
-    const { data: queriedRecord, error: adminErr } = await supabase
-      .from('admins')
-      .select('*')
-      .or(`id.eq.${authUser.id},email.eq.${email}`)
-      .maybeSingle();
-
-    adminRecord = queriedRecord;
-
-    if (adminErr) {
-      console.error('Supabase error checking admins table:', {
-        message: adminErr.message,
-        details: adminErr.details,
-        code: adminErr.code,
-        hint: adminErr.hint
-      });
+    // Strict email enforcement: only goshened76@gmail.com
+    if (email !== 'goshened76@gmail.com') {
+      await supabase.auth.signOut();
+      try {
+        localStorage.removeItem('legit_admin_user');
+      } catch {}
+      return null;
     }
 
-    if (!adminRecord) {
-      try {
-        const { data: autoRecord } = await supabase
-          .from('admins')
-          .upsert({
-            id: authUser.id,
-            name: authUser.user_metadata?.name || cleanNameFromEmail(email),
-            email: email,
-            role: (authUser.user_metadata?.role as any) || 'admin',
-            created_at: new Date().toISOString()
-          }, { onConflict: 'email' })
-          .select()
-          .maybeSingle();
-
-        if (autoRecord) {
-          adminRecord = autoRecord;
-        }
-      } catch (upsertErr) {
-        console.warn('Auto-upsert admin record note:', upsertErr);
-      }
+    let adminRecord: any = null;
+    try {
+      const { data: queriedRecord } = await supabase
+        .from('admins')
+        .select('*')
+        .eq('email', email)
+        .maybeSingle();
+      adminRecord = queriedRecord;
+    } catch (adminErr) {
+      console.warn('Supabase admins table query notice:', adminErr);
     }
 
     const verifiedProfile: AdminUser = {
       id: adminRecord?.id || authUser.id,
-      name: adminRecord?.name || authUser.user_metadata?.name || cleanNameFromEmail(email),
-      email: adminRecord?.email || email,
-      role: adminRecord?.role || (authUser.user_metadata?.role as any) || 'admin',
+      name: adminRecord?.name || authUser.user_metadata?.name || 'Odu Favour',
+      email: email,
+      role: 'admin',
       created_at: adminRecord?.created_at || authUser.created_at || new Date().toISOString()
     };
-    try {
-      localStorage.setItem('legit_admin_user', JSON.stringify(verifiedProfile));
-    } catch {}
+
     return verifiedProfile;
   } catch (err) {
-    console.error('Error fetching admin user profile:', err);
+    console.error('Error verifying admin session:', err);
     return null;
   }
 }

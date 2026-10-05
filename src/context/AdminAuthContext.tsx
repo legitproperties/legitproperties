@@ -4,9 +4,7 @@ import {
   supabase,
   getCurrentAdminUser,
   adminSignIn,
-  adminSignUp,
   adminSignOut,
-  adminDirectAccess,
   adminResetPassword,
   adminResendConfirmation,
   isSupabaseConfigured,
@@ -21,8 +19,6 @@ interface AdminAuthContextType {
   supabaseUrl: string;
   isCustomConfig: boolean;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error: string | null; errorCode?: string }>;
-  signUp: (name: string, email: string, password: string) => Promise<{ success: boolean; error: string | null; needsEmailConfirmation?: boolean }>;
-  directAccess: (email: string, name?: string) => Promise<{ success: boolean; error: string | null }>;
   resetPassword: (email: string) => Promise<{ success: boolean; error: string | null }>;
   resendConfirmation: (email: string) => Promise<{ success: boolean; error: string | null }>;
   signOut: () => Promise<void>;
@@ -35,22 +31,34 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [admin, setAdmin] = useState<AdminUser | null>(() => {
     try {
       const stored = localStorage.getItem('legit_admin_user');
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.email === 'goshened76@gmail.com') {
+          return parsed;
+        }
+      }
+    } catch {}
+    return null;
   });
   const [session, setSession] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const refreshProfile = async () => {
     try {
-      const userProfile = await getCurrentAdminUser();
-      if (userProfile) {
+      if (!session?.user) {
+        setAdmin(null);
+        return;
+      }
+      const userProfile = await getCurrentAdminUser(session.user);
+      if (userProfile && userProfile.email === 'goshened76@gmail.com') {
         setAdmin(userProfile);
+      } else {
+        await supabase?.auth.signOut();
+        setAdmin(null);
+        setSession(null);
       }
     } catch (err) {
-      console.error('Failed to load admin profile', err);
+      console.error('Failed to reload admin profile:', err);
     }
   };
 
@@ -71,28 +79,45 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           console.warn('Initial session check notice:', sessionErr.message);
         }
 
-        if (isMounted) {
-          setSession(initialSession);
-          if (initialSession?.user) {
+        if (initialSession?.user) {
+          const email = (initialSession.user.email || '').trim().toLowerCase();
+          if (email === 'goshened76@gmail.com') {
             const profile = await getCurrentAdminUser(initialSession.user);
             if (isMounted && profile) {
+              setSession(initialSession);
               setAdmin(profile);
             }
           } else {
-            // Fall back to locally persisted admin profile if present
-            try {
-              const stored = localStorage.getItem('legit_admin_user');
-              if (stored) {
-                const parsed = JSON.parse(stored);
-                if (parsed && parsed.email) {
-                  setAdmin(parsed);
-                }
+            // Unauthorized account: immediately purge session
+            await supabase.auth.signOut();
+            if (isMounted) {
+              setSession(null);
+              setAdmin(null);
+            }
+          }
+        } else {
+          try {
+            const stored = localStorage.getItem('legit_admin_user');
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (parsed?.email === 'goshened76@gmail.com') {
+                if (isMounted) setAdmin(parsed);
+              } else {
+                if (isMounted) setAdmin(null);
               }
-            } catch {}
+            } else {
+              if (isMounted) setAdmin(null);
+            }
+          } catch {
+            if (isMounted) setAdmin(null);
           }
         }
       } catch (e) {
-        console.error('Error during initial session check:', e);
+        console.error('Error during initial session verification:', e);
+        if (isMounted) {
+          setSession(null);
+          setAdmin(null);
+        }
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -102,25 +127,35 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     initializeAuth();
 
-    // Listen to Supabase Auth State Changes
+    // Listen to real-time Supabase Auth state changes
     if (supabase) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
         if (!isMounted) return;
-        setSession(newSession);
+
         if (newSession?.user) {
-          const profile = await getCurrentAdminUser(newSession.user);
-          if (isMounted) {
-            setAdmin(profile);
+          const email = (newSession.user.email || '').trim().toLowerCase();
+          if (email === 'goshened76@gmail.com') {
+            const profile = await getCurrentAdminUser(newSession.user);
+            if (isMounted) {
+              setSession(newSession);
+              setAdmin(profile);
+            }
+          } else {
+            // Unauthorized email signed in - revoke immediately
+            await supabase.auth.signOut();
+            if (isMounted) {
+              setSession(null);
+              setAdmin(null);
+            }
           }
-        } else if (event === 'SIGNED_OUT') {
+        } else {
+          // Signed out or session expired
           if (isMounted) {
             setAdmin(null);
             setSession(null);
-            try {
-              localStorage.removeItem('legit_admin_user');
-            } catch {}
           }
         }
+
         if (isMounted) {
           setIsLoading(false);
         }
@@ -139,12 +174,13 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setIsLoading(true);
     try {
       const { session: newSession, user: verifiedAdmin, error, errorCode } = await adminSignIn(email, password);
-      if (error || !verifiedAdmin) {
+      
+      if (error || !verifiedAdmin || !newSession) {
         setSession(null);
         setAdmin(null);
         return { 
           success: false, 
-          error: error || 'Authentication failed: Account not authorized in admins table.', 
+          error: error || 'Authentication failed. Please verify your credentials.', 
           errorCode 
         };
       }
@@ -163,40 +199,6 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  const handleSignUp = async (name: string, email: string, password: string) => {
-    setIsLoading(true);
-    const { user, session: newSession, error, needsEmailConfirmation } = await adminSignUp(name, email, password);
-    if (error || !user) {
-      setIsLoading(false);
-      return { success: false, error: error || 'Registration failed' };
-    }
-
-    const profile = (await getCurrentAdminUser(user)) || user;
-    if (profile) {
-      setAdmin(profile);
-      if (newSession) {
-        setSession(newSession);
-      }
-      try {
-        localStorage.setItem('legit_admin_user', JSON.stringify(profile));
-      } catch {}
-    }
-    setIsLoading(false);
-    return { success: true, error: null, needsEmailConfirmation };
-  };
-
-  const handleDirectAccess = async (email: string, name?: string) => {
-    setIsLoading(true);
-    const { user, error } = await adminDirectAccess(email, name);
-    if (error || !user) {
-      setIsLoading(false);
-      return { success: false, error: error || 'Direct access authorization failed' };
-    }
-    setAdmin(user);
-    setIsLoading(false);
-    return { success: true, error: null };
-  };
-
   const handleResetPassword = async (email: string) => {
     return await adminResetPassword(email);
   };
@@ -207,13 +209,13 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const handleSignOut = async () => {
     setIsLoading(true);
-    await adminSignOut();
-    setAdmin(null);
-    setSession(null);
     try {
-      localStorage.removeItem('legit_admin_user');
-    } catch {}
-    setIsLoading(false);
+      await adminSignOut();
+    } finally {
+      setAdmin(null);
+      setSession(null);
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -226,8 +228,6 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         supabaseUrl: activeSupabaseConfig.url,
         isCustomConfig: activeSupabaseConfig.isCustom,
         signIn: handleSignIn,
-        signUp: handleSignUp,
-        directAccess: handleDirectAccess,
         resetPassword: handleResetPassword,
         resendConfirmation: handleResendConfirmation,
         signOut: handleSignOut,

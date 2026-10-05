@@ -43,7 +43,7 @@ function AdminRouteView({ onNavigate }: { onNavigate: (path: string) => void }) 
     );
   }
 
-  if (!admin) {
+  if (!admin || admin.email !== 'goshened76@gmail.com') {
     return (
       <AdminAuthPage
         onSuccess={() => onNavigate('/admin/dashboard')}

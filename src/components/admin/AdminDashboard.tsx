@@ -33,6 +33,7 @@ import {
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { Property, BlogPost, PropertyRequestLead, BookingRequest } from '../../types';
 import {
+  supabase,
   fetchPropertiesFromSupabase,
   savePropertyToSupabase,
   deletePropertyFromSupabase,
@@ -366,7 +367,7 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
                 {admin?.name || 'Administrator'}
               </div>
               <div className="text-[10px] text-slate-400 font-mono leading-tight">
-                {admin?.email || 'admin@legitproperties'}
+                {admin?.email || 'goshened76@gmail.com'}
               </div>
             </div>
           </div>
