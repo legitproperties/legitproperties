@@ -9,7 +9,6 @@ import {
   Bookmark,
   Share2,
   MessageCircle,
-  Calculator,
   Bed,
   Bath,
   Maximize2,
@@ -38,10 +37,6 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [copiedLink, setCopiedLink] = useState(false);
-  const [downpaymentPercent, setDownpaymentPercent] = useState(
-    property.paymentPlan?.minDownpaymentPercent || 30
-  );
-  const [tenorMonths, setTenorMonths] = useState(6);
 
   const isShortStay =
     property.listing_type === 'short_stay' ||
@@ -51,11 +46,6 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
   const dualPrice = formatDualPrice(property.priceNgn, property.priceUsd, priceUnitLabel);
   const priceFormatted = formatCurrency(property.priceNgn, currency);
   const whatsappUrl = createWhatsAppInquiryUrl(property.title, property.id, dualPrice.combined);
-
-  // Installment calculation logic
-  const downpaymentAmount = (property.priceNgn * downpaymentPercent) / 100;
-  const balanceAmount = property.priceNgn - downpaymentAmount;
-  const monthlyPayment = balanceAmount / (tenorMonths || 1);
 
   const handleCopyShareLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -253,7 +243,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
               )}
             </div>
 
-            {/* Sidebar Specs & Installment Calculator (1 col) */}
+            {/* Sidebar Specs & Verification Desk (1 col) */}
             <div className="space-y-4">
               
               {/* Specs Box */}
@@ -294,62 +284,30 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                 </div>
               </div>
 
-              {/* Installment Estimator */}
-              {property.paymentPlan?.available && (
-                <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
-                  <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs">
-                    <Calculator className="w-4 h-4 text-slate-700" />
-                    <span>Flexible Installment Calculator</span>
+              {/* Direct Title Verification Desk Card */}
+              <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-slate-900 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0">
+                    <ShieldCheck className="w-4 h-4" />
                   </div>
-
-                  <div className="space-y-2 text-xs">
-                    <div>
-                      <div className="flex justify-between text-[11px] text-slate-500 font-semibold mb-1">
-                        <span>Downpayment</span>
-                        <span>{downpaymentPercent}% ({formatCurrency(downpaymentAmount, currency)})</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="20"
-                        max="60"
-                        step="5"
-                        value={downpaymentPercent}
-                        onChange={(e) => setDownpaymentPercent(Number(e.target.value))}
-                        className="w-full accent-slate-900"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-[11px] text-slate-500 font-semibold mb-1">
-                        <span>Payment Duration</span>
-                        <span>{tenorMonths} Months</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-1">
-                        {[3, 6, 12].map((m) => (
-                          <button
-                            key={m}
-                            onClick={() => setTenorMonths(m)}
-                            className={`py-1 rounded-md text-[11px] font-bold border transition-colors cursor-pointer ${
-                              tenorMonths === m
-                                ? 'bg-slate-900 text-white border-slate-900'
-                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                            }`}
-                          >
-                            {m} Months
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-100 flex justify-between items-center">
-                      <span className="text-[11px] text-slate-500 font-bold">Monthly Payment</span>
-                      <span className="text-sm font-black text-slate-900">
-                        {formatCurrency(monthlyPayment, currency)}
-                      </span>
-                    </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">Direct Verification Desk</div>
+                    <div className="text-[10px] text-slate-500 font-mono">Pre-Audited Documentation</div>
                   </div>
                 </div>
-              )}
+                <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
+                  Deeds, survey plans, and government registry title files for this property are pre-cleared by Legit Properties verification desk.
+                </p>
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Request Full Title Records</span>
+                </a>
+              </div>
 
             </div>
 
