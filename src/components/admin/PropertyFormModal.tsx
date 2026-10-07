@@ -61,9 +61,14 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   const initialNgn = propertyToEdit?.priceNgn || (listingType === 'short_stay' ? 150000 : 75000000);
   const initialUsd = propertyToEdit?.priceUsd ?? (propertyToEdit as any)?.price_usd ?? (initialNgn ? Math.round(initialNgn / 1500) : 100);
 
-  const [activeCurrencyInput, setActiveCurrencyInput] = useState<'NGN' | 'USD'>('NGN');
   const [displayCurrency, setDisplayCurrency] = useState<'NGN' | 'USD'>(() => {
     if (propertyToEdit?.currency === 'USD' || propertyToEdit?.display_currency === 'USD') return 'USD';
+    if (propertyToEdit?.priceUsd && propertyToEdit.priceUsd > 0 && !propertyToEdit?.description?.includes('[CURRENCY:NGN]')) return 'USD';
+    return 'NGN';
+  });
+  const [activeCurrencyInput, setActiveCurrencyInput] = useState<'NGN' | 'USD'>(() => {
+    if (propertyToEdit?.currency === 'USD' || propertyToEdit?.display_currency === 'USD') return 'USD';
+    if (propertyToEdit?.priceUsd && propertyToEdit.priceUsd > 0 && !propertyToEdit?.description?.includes('[CURRENCY:NGN]')) return 'USD';
     return 'NGN';
   });
   const [exchangeRate, setExchangeRate] = useState<number>(1500);

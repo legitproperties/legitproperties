@@ -374,6 +374,7 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
             <div className="lg:col-span-5 relative">
               <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200 aspect-[16/11] bg-slate-900">
                 <img
+                  key={meta.heroImage}
                   src={meta.heroImage}
                   alt={meta.title}
                   className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700"

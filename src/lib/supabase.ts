@@ -498,7 +498,10 @@ export async function fetchPropertiesFromSupabase(filters?: PropertyQueryFilters
         resolvedCurrency = 'USD';
       } else if (desc.includes('[CURRENCY:USD]')) {
         resolvedCurrency = 'USD';
-      } else if (item.price_usd && (!item.price || item.price === 0)) {
+      } else if (desc.includes('[CURRENCY:NGN]')) {
+        resolvedCurrency = 'NGN';
+      } else if (item.price_usd && Number(item.price_usd) > 0) {
+        // Explicit USD price entered without NGN tag
         resolvedCurrency = 'USD';
       }
       const cleanDescription = desc.replace(/\[CURRENCY:(USD|NGN)\]/g, '').trim();
