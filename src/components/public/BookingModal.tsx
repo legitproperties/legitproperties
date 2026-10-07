@@ -48,11 +48,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     }
   }, [checkIn, checkOut]);
 
-  const pricePerNight = property.priceNgn || 85000;
   const isShortStay = property.listing_type === 'short_stay' || property.price_unit === 'per_night' || property.category === 'short_stay';
-  const effectiveUsdPerNight = (property.priceUsd && property.priceUsd > 0) ? property.priceUsd : Math.round(pricePerNight / 1500);
-  const totalAmount = isShortStay ? pricePerNight * nights : pricePerNight;
-  const totalAmountUsd = isShortStay ? effectiveUsdPerNight * nights : effectiveUsdPerNight;
+  const isUsd = property.currency === 'USD' || property.display_currency === 'USD';
+  const currencySymbol = isUsd ? '$' : '₦';
+  const activeRate = isUsd
+    ? ((property.priceUsd && property.priceUsd > 0) ? property.priceUsd : Math.round((property.priceNgn || 85000) / 1500))
+    : (property.priceNgn || 85000);
+  const pricePerNight = activeRate;
+  const totalAmount = isShortStay ? activeRate * nights : activeRate;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,8 +217,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">{property.title}</h4>
                   <p className="text-[11px] text-slate-500 truncate">{property.location.neighborhood}, {property.location.city}</p>
                   <div className="text-xs font-extrabold text-slate-900 mt-1 flex items-center gap-1.5 font-mono">
-                    <span>₦{pricePerNight.toLocaleString()}{isShortStay ? ' / night' : ' total'}</span>
-                    <span className="text-emerald-700 font-bold">(${effectiveUsdPerNight.toLocaleString()}{isShortStay ? ' / night' : ' total'})</span>
+                    <span>{currencySymbol}{pricePerNight.toLocaleString()}{isShortStay ? ' / night' : ' total'}</span>
+                    <span className="text-[10px] text-slate-400 font-sans uppercase">({isUsd ? 'USD' : 'NGN'})</span>
                   </div>
                 </div>
               </div>
@@ -345,18 +348,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               {isShortStay && (
                 <div className="p-4 bg-slate-900 text-white rounded-2xl space-y-2">
                   <div className="flex items-center justify-between text-xs text-slate-300">
-                    <span>₦{pricePerNight.toLocaleString()} × {nights} night{nights > 1 ? 's' : ''}</span>
-                    <span className="font-mono">₦{(pricePerNight * nights).toLocaleString()}</span>
+                    <span>{currencySymbol}{pricePerNight.toLocaleString()} × {nights} night{nights > 1 ? 's' : ''}</span>
+                    <span className="font-mono">{currencySymbol}{(pricePerNight * nights).toLocaleString()}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs text-slate-300">
                     <span>Cleanliness & Power Guarantee Fee</span>
-                    <span className="text-emerald-400 font-semibold">Included (₦0)</span>
+                    <span className="text-emerald-400 font-semibold">Included ({currencySymbol}0)</span>
                   </div>
                   <div className="pt-2 border-t border-slate-800 flex items-center justify-between font-extrabold text-sm sm:text-base">
                     <span>Total Payable</span>
                     <div className="text-right font-mono">
-                      <span className="text-emerald-400">₦{totalAmount.toLocaleString()}</span>
-                      <span className="text-xs text-slate-300 ml-1.5 font-normal">(${totalAmountUsd.toLocaleString()})</span>
+                      <span className="text-emerald-400">{currencySymbol}{totalAmount.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>

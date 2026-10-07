@@ -1,6 +1,6 @@
 import React from 'react';
 import { Property, CurrencyCode } from '../types';
-import { formatCompactPrice, formatCurrency } from '../utils/formatters';
+import { formatCompactPrice, formatCurrency, formatPropertyPrice } from '../utils/formatters';
 import { X, Trash2, MessageCircle, ShieldCheck } from 'lucide-react';
 
 interface SavedDrawerProps {
@@ -102,7 +102,7 @@ export const SavedDrawer: React.FC<SavedDrawerProps> = ({
                     {property.title}
                   </h4>
                   <div className="text-xs font-black text-slate-900 mt-0.5">
-                    {formatCompactPrice(property.priceNgn, currency)}
+                    {formatPropertyPrice(property).formatted}
                   </div>
                 </div>
 

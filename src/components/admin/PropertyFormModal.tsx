@@ -62,6 +62,10 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   const initialUsd = propertyToEdit?.priceUsd ?? (propertyToEdit as any)?.price_usd ?? (initialNgn ? Math.round(initialNgn / 1500) : 100);
 
   const [activeCurrencyInput, setActiveCurrencyInput] = useState<'NGN' | 'USD'>('NGN');
+  const [displayCurrency, setDisplayCurrency] = useState<'NGN' | 'USD'>(() => {
+    if (propertyToEdit?.currency === 'USD' || propertyToEdit?.display_currency === 'USD') return 'USD';
+    return 'NGN';
+  });
   const [exchangeRate, setExchangeRate] = useState<number>(1500);
   const [isAutoSync, setIsAutoSync] = useState<boolean>(true);
   const [priceNgn, setPriceNgn] = useState<number>(initialNgn);
@@ -86,6 +90,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
 
   const handleSwitchCurrency = (target: 'NGN' | 'USD') => {
     setActiveCurrencyInput(target);
+    setDisplayCurrency(target);
   };
 
   // 5. Contact Numbers
@@ -192,6 +197,8 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       property_type: listingType === 'short_stay' ? 'short_stay' : 'for_sale',
       type: (listingType === 'short_stay' ? 'short_stay' : 'apartment') as any,
       price_unit: priceUnit,
+      currency: displayCurrency,
+      display_currency: displayCurrency,
       category: listingType === 'short_stay' ? 'short_stay' : 'luxury_apartment',
       purpose: listingType === 'short_stay' ? 'Vacation & Short Stay' : 'Investment',
       location: {
@@ -561,6 +568,74 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                 <div className="text-[10px] text-slate-500 mt-1.5 text-center">
                   Ensuite specs
                 </div>
+              </div>
+            </div>
+
+            {/* Live App Display Currency Selector: guarantees ONLY the chosen currency shows on live app */}
+            <div className="p-3.5 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-black text-slate-900 uppercase tracking-wide">
+                      Live App Display Currency
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider">
+                      Exclusive
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Select exclusively which currency price is shown to live visitors (no side-by-side display):
+                  </p>
+                </div>
+
+                {/* Exclusive Choice Toggle */}
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDisplayCurrency('NGN');
+                      setActiveCurrencyInput('NGN');
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      displayCurrency === 'NGN'
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                    }`}
+                  >
+                    <span className="font-mono font-bold">₦</span>
+                    <span>Naira (NGN) Only</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDisplayCurrency('USD');
+                      setActiveCurrencyInput('USD');
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      displayCurrency === 'USD'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                    }`}
+                  >
+                    <span className="font-mono font-bold">$</span>
+                    <span>Dollar (USD) Only</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Real-time Confirmation Badge */}
+              <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs">
+                <span className="text-slate-500 font-medium">Visible on Live App:</span>
+                <span className="font-mono font-bold text-slate-900 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  {displayCurrency === 'USD'
+                    ? `$${(priceUsd !== '' ? Number(priceUsd) : (priceNgn ? Math.round(Number(priceNgn) / exchangeRate) : 0)).toLocaleString()} ${priceUnit === 'per_night' ? '/ night' : 'total'}`
+                    : `₦${Number(priceNgn).toLocaleString()} ${priceUnit === 'per_night' ? '/ night' : 'total'}`}
+                  <span className="text-[10px] text-slate-500 font-sans font-normal uppercase">
+                    ({displayCurrency === 'USD' ? 'US Dollars only' : 'Nigerian Naira only'})
+                  </span>
+                </span>
               </div>
             </div>
 

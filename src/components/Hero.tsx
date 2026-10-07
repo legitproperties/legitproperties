@@ -1,7 +1,7 @@
 import React from 'react';
 import { ShieldCheck, ArrowDown, Building2, MapPin, Search, Trees, Home, Building, Banknote, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 import { FilterOptions } from '../types';
-import heroHouseImg from '../assets/images/luxury_modern_house_1787638229702.jpg';
+import heroHouseImg from '../assets/images/PROPERTY 1.jpeg';
 
 interface HeroProps {
   filterOptions: FilterOptions;

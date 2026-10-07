@@ -492,6 +492,17 @@ export async function fetchPropertiesFromSupabase(filters?: PropertyQueryFilters
       const listingType = (isShortStay ? 'short_stay' : (item.listing_type || 'for_sale')) as 'short_stay' | 'for_sale';
       const priceUnit = (item.price_unit || (listingType === 'short_stay' ? 'per_night' : 'total')) as 'per_night' | 'total';
 
+      const desc = item.description || '';
+      let resolvedCurrency: 'NGN' | 'USD' = 'NGN';
+      if (item.currency === 'USD' || item.display_currency === 'USD') {
+        resolvedCurrency = 'USD';
+      } else if (desc.includes('[CURRENCY:USD]')) {
+        resolvedCurrency = 'USD';
+      } else if (item.price_usd && (!item.price || item.price === 0)) {
+        resolvedCurrency = 'USD';
+      }
+      const cleanDescription = desc.replace(/\[CURRENCY:(USD|NGN)\]/g, '').trim();
+
       return {
         id: item.id ? String(item.id) : (item.slug || Math.random().toString()),
         title: item.title || 'Untitled Property',
@@ -499,6 +510,8 @@ export async function fetchPropertiesFromSupabase(filters?: PropertyQueryFilters
         type: (item.property_type || (listingType === 'short_stay' ? 'short_stay' : 'apartment')) as PropertyType,
         listing_type: listingType,
         price_unit: priceUnit,
+        currency: resolvedCurrency,
+        display_currency: resolvedCurrency,
         category: (listingType === 'short_stay' ? 'short_stay' : (item.category || 'luxury_apartment')) as any,
         purpose: listingType === 'short_stay' ? 'Vacation & Short Stay' : (item.purpose || 'Investment'),
         location: parsedLocation,
@@ -516,7 +529,7 @@ export async function fetchPropertiesFromSupabase(filters?: PropertyQueryFilters
         images: gallery,
         property_image: mainImg,
         gallery_images: gallery,
-        description: item.description || '',
+        description: cleanDescription || '',
         features: Array.isArray(item.features) ? item.features : ['24/7 Power', 'High Speed Wi-Fi', 'Security & Access Control', 'Dedicated Chef / Concierge'],
         amenities: Array.isArray(item.amenities) ? item.amenities : ['Air Conditioning', 'Swimming Pool', 'Smart TV & Streaming', 'Fully Equipped Kitchen'],
         nearbyLandmarks: Array.isArray(item.nearby_landmarks) ? item.nearby_landmarks : (item.nearbyLandmarks || ['Close to Premium Lounges', 'Airport Access Corridor']),
@@ -643,7 +656,11 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
       : null;
 
     const safeTitle = (property.title || '').trim();
-    const safeDescription = property.description?.trim() || 'Verified real estate property with clean title clearance.';
+    const selectedCurrency = property.currency || property.display_currency || 'NGN';
+    const cleanDesc = (property.description?.trim() || 'Verified real estate property with clean title clearance.')
+      .replace(/\[CURRENCY:(USD|NGN)\]/g, '')
+      .trim();
+    const safeDescription = `${cleanDesc} [CURRENCY:${selectedCurrency}]`;
 
     const locationString = typeof property.location === 'object' && property.location !== null
       ? [property.location.address, property.location.neighborhood, property.location.city, property.location.state].filter(Boolean).join(', ') || 'Lagos, Nigeria'
@@ -683,11 +700,12 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
       property_availability: propertyAvailability
     };
 
-    // Extended payload including listing_type and price_unit (if schema has been upgraded)
+    // Extended payload including listing_type, price_unit and currency (if schema has been upgraded)
     const extendedPayload: Record<string, any> = {
       ...basePayload,
       listing_type: listingType,
-      price_unit: priceUnit
+      price_unit: priceUnit,
+      currency: selectedCurrency
     };
 
     if (property.id && !property.id.startsWith('temp-')) {

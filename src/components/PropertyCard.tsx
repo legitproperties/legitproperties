@@ -1,7 +1,7 @@
 import React from 'react';
 import { Property, CurrencyCode } from '../types';
 import { ShieldCheck, MapPin, Bookmark, Bed, Bath, Maximize2, MessageCircle, Phone, ArrowUpRight, Flame, Calendar } from 'lucide-react';
-import { formatDualPrice } from '../utils/formatters';
+import { formatPropertyPrice } from '../utils/formatters';
 
 interface PropertyCardProps {
   property: Property;
@@ -26,11 +26,11 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
     property.category === 'short_stay';
 
   const priceUnitLabel = isShortStay ? ' / night' : '';
-  const dualPrice = formatDualPrice(property.priceNgn, property.priceUsd, priceUnitLabel);
+  const priceInfo = formatPropertyPrice(property, priceUnitLabel);
   const cleanWhatsapp = (property.whatsappNumber || '+2348030000000').replace(/[^0-9]/g, '');
   const cleanCall = property.callNumber || property.whatsappNumber || '+2348030000000';
   const whatsappUrl = `https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent(
-    `Hello Legit Properties! I am inquiring about: ${property.title} in ${property.location.neighborhood || property.location.city} (${dualPrice.combined}). Is it available?`
+    `Hello Legit Properties! I am inquiring about: ${property.title} in ${property.location.neighborhood || property.location.city} (${priceInfo.formatted}). Is it available?`
   )}`;
 
   return (
@@ -158,13 +158,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         <div className="pt-3 border-t border-slate-100 space-y-2.5 mt-auto">
           
           <div className="flex items-baseline justify-between gap-2">
-            <div className="text-[10px] uppercase font-bold text-slate-400">Price (₦ / $)</div>
+            <div className="text-[10px] uppercase font-bold text-slate-400">
+              {priceInfo.currency === 'USD' ? 'Price (USD)' : 'Price (NGN)'}
+            </div>
             <div className="text-right">
               <span className="text-base sm:text-lg font-black text-slate-900 font-mono tracking-tight">
-                {dualPrice.ngnFormatted}
-              </span>
-              <span className="ml-1.5 text-xs font-bold text-emerald-700 font-mono">
-                ({dualPrice.usdFormatted})
+                {priceInfo.formatted}
               </span>
             </div>
           </div>

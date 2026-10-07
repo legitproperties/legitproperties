@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Property, CurrencyCode } from '../types';
-import { formatCurrency, createWhatsAppInquiryUrl, formatDualPrice } from '../utils/formatters';
+import { formatCurrency, createWhatsAppInquiryUrl, formatPropertyPrice } from '../utils/formatters';
 import {
   X,
   ShieldCheck,
@@ -43,9 +43,9 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
     property.price_unit === 'per_night' ||
     property.category === 'short_stay';
   const priceUnitLabel = isShortStay ? ' / night' : '';
-  const dualPrice = formatDualPrice(property.priceNgn, property.priceUsd, priceUnitLabel);
+  const priceInfo = formatPropertyPrice(property, priceUnitLabel);
   const priceFormatted = formatCurrency(property.priceNgn, currency);
-  const whatsappUrl = createWhatsAppInquiryUrl(property.title, property.id, dualPrice.combined);
+  const whatsappUrl = createWhatsAppInquiryUrl(property.title, property.id, priceInfo.formatted);
 
   const handleCopyShareLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -159,10 +159,10 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
               </div>
               <div className="flex flex-wrap items-baseline gap-2.5 mt-1">
                 <span className="text-2xl sm:text-3xl font-black text-slate-900 font-mono tracking-tight">
-                  {dualPrice.ngnFormatted}
+                  {priceInfo.formatted}
                 </span>
-                <span className="text-base sm:text-lg font-bold text-emerald-700 font-mono">
-                  ({dualPrice.usdFormatted})
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-200/70 px-2 py-0.5 rounded-md font-mono">
+                  {priceInfo.currency} Price
                 </span>
               </div>
             </div>

@@ -18,7 +18,9 @@ import {
 } from 'lucide-react';
 import { Property, SupportedCity, ListingType } from '../../types';
 import { fetchPropertiesFromSupabase } from '../../lib/supabase';
-import { formatDualPrice } from '../../utils/formatters';
+import { formatPropertyPrice } from '../../utils/formatters';
+import propertyForSaleHeroImg from '../../assets/images/PROPERTY 1.jpeg';
+import shortStayHeroImg from '../../assets/images/hero_luxury_interior_1790768220829.jpg';
 
 interface LocalizedLandingPageProps {
   currentCategory: 'short_stay' | 'for_sale';
@@ -43,7 +45,7 @@ const CITY_METADATA: Record<string, LocationMeta> = {
     title: 'Experience Luxury Short Stays in Lagos',
     tagline: 'Hand-picked premium shortlets, waterfront penthouses, and serviced apartments in Ikoyi, Victoria Island & Lekki Phase 1.',
     keywords: 'Lagos shortlet · Lagos short stay apartments · Lagos Airbnb · 24/7 Uninterrupted Light · Private Chef Available',
-    heroImage: '/src/assets/images/hero_shortstay_lagos_1790768196208.jpg',
+    heroImage: shortStayHeroImg,
     ctaText: 'Explore Lagos Short Stays',
     neighborhoods: ['Ikoyi', 'Victoria Island', 'Lekki Phase 1', 'Banana Island', 'Ikeja GRA', 'Eko Atlantic']
   },
@@ -51,7 +53,7 @@ const CITY_METADATA: Record<string, LocationMeta> = {
     title: 'Executive Short Stay Apartments in Abuja',
     tagline: 'Diplomatic residences, skyline duplexes, and quiet luxury villas in Maitama, Asokoro, Guzape & Wuse 2.',
     keywords: 'Abuja shortlet · Abuja short stay apartments · Abuja Airbnb · Diplomatic Security · High-Speed Fiber Internet',
-    heroImage: '/src/assets/images/hero_shortstay_abuja_1790768208820.jpg',
+    heroImage: shortStayHeroImg,
     ctaText: 'Explore Abuja Short Stays',
     neighborhoods: ['Maitama', 'Asokoro', 'Guzape', 'Wuse 2', 'Jabi Lake', 'Gwarinpa']
   },
@@ -59,7 +61,7 @@ const CITY_METADATA: Record<string, LocationMeta> = {
     title: 'Short Stay Apartments in Port Harcourt (Rivers State)',
     tagline: 'Upscale corporate residences, garden city villas, and waterfront executive flats in Old GRA, Peter Odili & Trans-Amadi.',
     keywords: 'Port Harcourt shortlet · Rivers State short stay apartments · PH Airbnb · 24/7 Power Security Escort Available',
-    heroImage: '/src/assets/images/hero_luxury_interior_1790768220829.jpg',
+    heroImage: shortStayHeroImg,
     ctaText: 'Explore Port Harcourt Stays',
     neighborhoods: ['Old GRA', 'Peter Odili Road', 'Trans-Amadi', 'Ada George', 'Woji', 'GRA Phase 2']
   },
@@ -67,7 +69,7 @@ const CITY_METADATA: Record<string, LocationMeta> = {
     title: 'Short Stay Apartments in Ibadan',
     tagline: 'Serene heritage penthouses and contemporary serviced suites in Bodija, Iyaganku GRA & Oluyole Estate.',
     keywords: 'Ibadan shortlet · Ibadan short stay apartments · Ibadan Airbnb · Peaceful Ambience · Private Pool Suites',
-    heroImage: '/src/assets/images/hero_luxury_interior_1790768220829.jpg',
+    heroImage: shortStayHeroImg,
     ctaText: 'Explore Ibadan Short Stays',
     neighborhoods: ['Bodija', 'Iyaganku GRA', 'Oluyole Estate', 'Jericho', 'Alalubosa GRA', 'Ring Road']
   },
@@ -75,7 +77,7 @@ const CITY_METADATA: Record<string, LocationMeta> = {
     title: 'Short Stay Apartments in Edo State',
     tagline: 'Executive suites, royal diaspora villas, and furnished vacation homes across Benin City & surrounding prime axes.',
     keywords: 'Benin City shortlet · Edo short stay apartments · Edo Airbnb · Gated Luxury · Event Concierge Ready',
-    heroImage: '/src/assets/images/hero_luxury_interior_1790768220829.jpg',
+    heroImage: shortStayHeroImg,
     ctaText: 'Explore Edo Short Stays',
     neighborhoods: ['GRA Benin City', 'Airport Road', 'Ugbor GRA', 'Boundary Road', 'Ihama Road', 'Sapele Road']
   },
@@ -83,7 +85,7 @@ const CITY_METADATA: Record<string, LocationMeta> = {
     title: 'Short Stay Apartments in Enugu',
     tagline: 'Scenic coal-city hillside villas, golf course retreats, and serviced luxury apartments in Independence Layout & New Haven.',
     keywords: 'Enugu shortlet · Enugu short stay apartments · Enugu Airbnb · Mountain Skyline Views · Executive Comfort',
-    heroImage: '/src/assets/images/hero_luxury_interior_1790768220829.jpg',
+    heroImage: shortStayHeroImg,
     ctaText: 'Explore Enugu Short Stays',
     neighborhoods: ['Independence Layout', 'New Haven', 'Golf Estate', 'GRA Enugu', 'Trans-Ekulu', 'Rikita']
   },
@@ -91,7 +93,7 @@ const CITY_METADATA: Record<string, LocationMeta> = {
     title: 'Short Stay Apartments in Anambra',
     tagline: 'Ultra-modern serviced apartments, luxury commercial executive lodges in Awka Capital & Onitsha Commercial Hub.',
     keywords: 'Awka shortlet · Onitsha short stay apartments · Anambra Airbnb · 24/7 Solar Backup · VIP Chauffeur on Request',
-    heroImage: '/src/assets/images/hero_luxury_interior_1790768220829.jpg',
+    heroImage: shortStayHeroImg,
     ctaText: 'Explore Anambra Short Stays',
     neighborhoods: ['Awka GRA', 'Nodu Okpuno', 'Onitsha GRA', 'Nnewi Executive Axis', 'Agu-Awka', 'Federal Housing']
   },
@@ -99,7 +101,7 @@ const CITY_METADATA: Record<string, LocationMeta> = {
     title: 'Verified Luxury Properties for Sale Across Nigeria',
     tagline: 'Legally vetted lands with Certificate of Occupancy (C of O), Governor\'s Consent, and architectural mansions ready for title transfer.',
     keywords: 'Nigeria properties for sale · Verified C of O land Lagos · Maitama Abuja houses · Diaspora title verification guaranteed',
-    heroImage: '/src/assets/images/hero_property_sales_1790768238681.jpg',
+    heroImage: propertyForSaleHeroImg,
     ctaText: 'Browse Properties for Sale',
     neighborhoods: ['Lagos', 'Abuja', 'Port Harcourt', 'Ibadan', 'Edo', 'Enugu', 'Anambra']
   }
@@ -127,12 +129,19 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
           tagline: `Legally verified lands, off-plan developments, and finished duplexes in ${currentCity} with certified land registry records.`,
           keywords: `${currentCity} property for sale · ${currentCity} lands with C of O · Direct Owner Deals · Safe Diaspora Escrow`,
           ctaText: `Explore ${currentCity} Properties for Sale`,
-          heroImage: '/src/assets/images/hero_property_sales_1790768238681.jpg'
+          heroImage: propertyForSaleHeroImg
         };
       }
-      return CITY_METADATA.for_sale_all;
+      return {
+        ...CITY_METADATA.for_sale_all,
+        heroImage: propertyForSaleHeroImg
+      };
     }
-    return CITY_METADATA[currentCity] || CITY_METADATA.Lagos;
+    const shortStayBase = CITY_METADATA[currentCity] || CITY_METADATA.Lagos;
+    return {
+      ...shortStayBase,
+      heroImage: shortStayHeroImg
+    };
   }, [currentCategory, currentCity]);
 
   // Smooth scroll down to listings
@@ -491,11 +500,11 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
                 property.category === 'short_stay';
 
               const priceUnitLabel = isShortStay ? ' / night' : '';
-              const dualPrice = formatDualPrice(property.priceNgn, property.priceUsd, priceUnitLabel);
+              const priceInfo = formatPropertyPrice(property, priceUnitLabel);
               const cleanWhatsapp = (property.whatsappNumber || '+2348030000000').replace(/[^0-9]/g, '');
               const cleanCall = property.callNumber || property.whatsappNumber || '+2348030000000';
               const messageText = encodeURIComponent(
-                `Hello Legit Properties, I am inquiring about: ${property.title} in ${property.location.neighborhood || property.location.city} (${dualPrice.combined}). Is it available?`
+                `Hello Legit Properties, I am inquiring about: ${property.title} in ${property.location.neighborhood || property.location.city} (${priceInfo.formatted}). Is it available?`
               );
 
               return (
@@ -565,13 +574,13 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
                         <span>{property.sizeSqm ? `${property.sizeSqm} sqm` : 'Executive'}</span>
                       </div>
 
-                      {/* Dual Price in NGN and USD with unit */}
+                      {/* Single Exclusive Price in selected currency (Naira or Dollar) */}
                       <div className="pt-2 border-t border-slate-100 flex items-baseline justify-between gap-2">
                         <span className="text-lg sm:text-xl font-black text-slate-900 font-mono tracking-tight">
-                          {dualPrice.ngnFormatted}
+                          {priceInfo.formatted}
                         </span>
-                        <span className="text-xs sm:text-sm font-bold text-emerald-700 font-mono">
-                          ({dualPrice.usdFormatted})
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                          {priceInfo.currency}
                         </span>
                       </div>
                     </div>
