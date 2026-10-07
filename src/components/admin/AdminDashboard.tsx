@@ -678,8 +678,13 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
                             <td className="py-3 text-slate-300">
                               {prop.location?.neighborhood}, {prop.location?.city}
                             </td>
-                            <td className="py-3 font-bold text-emerald-400">
-                              ₦{prop.priceNgn.toLocaleString()}
+                            <td className="py-3">
+                              <div className="font-bold text-emerald-400 font-mono">
+                                ₦{prop.priceNgn.toLocaleString()}{prop.price_unit === 'per_night' ? ' / night' : ''}
+                              </div>
+                              <div className="text-[11px] text-slate-400 font-mono">
+                                ${((prop.priceUsd && prop.priceUsd > 0) ? prop.priceUsd : Math.round(prop.priceNgn / 1500)).toLocaleString()}{prop.price_unit === 'per_night' ? ' / night' : ''}
+                              </div>
                             </td>
                             <td className="py-3">
                               <div className="flex flex-col items-start gap-1">
@@ -796,8 +801,9 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
                             </span>
                           )}
                         </div>
-                        <span className="absolute bottom-2.5 right-2.5 px-2.5 py-1 rounded-xl bg-slate-900/90 backdrop-blur-xs text-white text-xs font-extrabold">
-                          ₦{prop.priceNgn.toLocaleString()}
+                        <span className="absolute bottom-2.5 right-2.5 px-2.5 py-1 rounded-xl bg-slate-900/90 backdrop-blur-xs text-white text-xs font-extrabold flex items-center gap-1.5 font-mono">
+                          <span>₦{prop.priceNgn.toLocaleString()}</span>
+                          <span className="text-emerald-400 text-[10px]">(${((prop.priceUsd && prop.priceUsd > 0) ? prop.priceUsd : Math.round(prop.priceNgn / 1500)).toLocaleString()})</span>
                         </span>
                       </div>
 

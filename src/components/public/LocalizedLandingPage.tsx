@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Property, SupportedCity, ListingType } from '../../types';
 import { fetchPropertiesFromSupabase } from '../../lib/supabase';
+import { formatDualPrice } from '../../utils/formatters';
 
 interface LocalizedLandingPageProps {
   currentCategory: 'short_stay' | 'for_sale';
@@ -489,11 +490,12 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
                 property.price_unit === 'per_night' ||
                 property.category === 'short_stay';
 
-              const priceUnitLabel = isShortStay ? ' / night' : ' total';
+              const priceUnitLabel = isShortStay ? ' / night' : '';
+              const dualPrice = formatDualPrice(property.priceNgn, property.priceUsd, priceUnitLabel);
               const cleanWhatsapp = (property.whatsappNumber || '+2348030000000').replace(/[^0-9]/g, '');
               const cleanCall = property.callNumber || property.whatsappNumber || '+2348030000000';
               const messageText = encodeURIComponent(
-                `Hello Legit Properties, I am inquiring about: ${property.title} in ${property.location.neighborhood || property.location.city} (₦${property.priceNgn.toLocaleString()}${priceUnitLabel}). Is it available?`
+                `Hello Legit Properties, I am inquiring about: ${property.title} in ${property.location.neighborhood || property.location.city} (${dualPrice.combined}). Is it available?`
               );
 
               return (
@@ -563,13 +565,13 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
                         <span>{property.sizeSqm ? `${property.sizeSqm} sqm` : 'Executive'}</span>
                       </div>
 
-                      {/* Price in NGN with unit */}
-                      <div className="pt-2 border-t border-slate-100 flex items-baseline gap-1">
-                        <span className="text-xl font-black text-slate-900 font-mono">
-                          ₦{property.priceNgn.toLocaleString()}
+                      {/* Dual Price in NGN and USD with unit */}
+                      <div className="pt-2 border-t border-slate-100 flex items-baseline justify-between gap-2">
+                        <span className="text-lg sm:text-xl font-black text-slate-900 font-mono tracking-tight">
+                          {dualPrice.ngnFormatted}
                         </span>
-                        <span className="text-xs text-slate-500 font-medium">
-                          {priceUnitLabel}
+                        <span className="text-xs sm:text-sm font-bold text-emerald-700 font-mono">
+                          ({dualPrice.usdFormatted})
                         </span>
                       </div>
                     </div>

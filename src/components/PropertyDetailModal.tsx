@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Property, CurrencyCode } from '../types';
-import { formatCurrency, createWhatsAppInquiryUrl } from '../utils/formatters';
+import { formatCurrency, createWhatsAppInquiryUrl, formatDualPrice } from '../utils/formatters';
 import {
   X,
   ShieldCheck,
@@ -43,8 +43,14 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
   );
   const [tenorMonths, setTenorMonths] = useState(6);
 
+  const isShortStay =
+    property.listing_type === 'short_stay' ||
+    property.price_unit === 'per_night' ||
+    property.category === 'short_stay';
+  const priceUnitLabel = isShortStay ? ' / night' : '';
+  const dualPrice = formatDualPrice(property.priceNgn, property.priceUsd, priceUnitLabel);
   const priceFormatted = formatCurrency(property.priceNgn, currency);
-  const whatsappUrl = createWhatsAppInquiryUrl(property.title, property.id, priceFormatted);
+  const whatsappUrl = createWhatsAppInquiryUrl(property.title, property.id, dualPrice.combined);
 
   // Installment calculation logic
   const downpaymentAmount = (property.priceNgn * downpaymentPercent) / 100;
@@ -161,8 +167,13 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                 <MapPin className="w-3.5 h-3.5 text-slate-400" />
                 <span>{property.location.address}, {property.location.neighborhood}, {property.location.city}</span>
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
-                {priceFormatted}
+              <div className="flex flex-wrap items-baseline gap-2.5 mt-1">
+                <span className="text-2xl sm:text-3xl font-black text-slate-900 font-mono tracking-tight">
+                  {dualPrice.ngnFormatted}
+                </span>
+                <span className="text-base sm:text-lg font-bold text-emerald-700 font-mono">
+                  ({dualPrice.usdFormatted})
+                </span>
               </div>
             </div>
 

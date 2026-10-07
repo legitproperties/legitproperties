@@ -32,6 +32,7 @@ export interface Property {
     state: string;
   };
   priceNgn: number;
+  priceUsd?: number;
   sizeSqm?: number;
   plotsCount?: number;
   bedrooms?: number;

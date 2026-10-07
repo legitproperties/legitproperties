@@ -3,6 +3,57 @@ import { CurrencyCode } from '../types';
 export const USD_RATE = 1500;
 export const GBP_RATE = 1950;
 
+/**
+ * Format an amount in USD ($) cleanly
+ */
+export const formatUsd = (usdAmount: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0
+  }).format(usdAmount);
+};
+
+/**
+ * Format dual currency prices (Naira ₦ and US Dollars $)
+ * If priceUsd is specified, uses that; otherwise converts priceNgn at USD_RATE.
+ */
+export const formatDualPrice = (
+  priceNgn: number,
+  priceUsd?: number | null,
+  unitLabel: string = ''
+): {
+  ngnFormatted: string;
+  usdFormatted: string;
+  combined: string;
+  compactNgn: string;
+  compactUsd: string;
+} => {
+  const ngnVal = Number(priceNgn) || 0;
+  const effectiveUsd = (priceUsd !== undefined && priceUsd !== null && priceUsd > 0)
+    ? Number(priceUsd)
+    : Math.round(ngnVal / USD_RATE);
+
+  const ngnFormatted = `₦${ngnVal.toLocaleString('en-NG')}${unitLabel}`;
+  const usdFormatted = `$${effectiveUsd.toLocaleString('en-US')}${unitLabel}`;
+  const combined = `${ngnFormatted} (${usdFormatted})`;
+
+  const compactNgn = formatCompactPrice(ngnVal, 'NGN');
+  const compactUsd = effectiveUsd >= 1000000 
+    ? `$${(effectiveUsd / 1000000).toFixed(1)}M` 
+    : effectiveUsd >= 1000 
+      ? `$${(effectiveUsd / 1000).toFixed(0)}K` 
+      : `$${effectiveUsd}`;
+
+  return {
+    ngnFormatted,
+    usdFormatted,
+    combined,
+    compactNgn,
+    compactUsd
+  };
+};
+
 export const formatCurrency = (
   amountNgn: number,
   currencyCode: CurrencyCode = 'NGN'

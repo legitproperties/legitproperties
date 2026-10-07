@@ -503,6 +503,7 @@ export async function fetchPropertiesFromSupabase(filters?: PropertyQueryFilters
         purpose: listingType === 'short_stay' ? 'Vacation & Short Stay' : (item.purpose || 'Investment'),
         location: parsedLocation,
         priceNgn: item.price ?? item.price_ngn ?? item.priceNgn ?? 0,
+        priceUsd: item.price_usd !== null && item.price_usd !== undefined ? Number(item.price_usd) : (item.priceUsd ? Number(item.priceUsd) : undefined),
         sizeSqm: item.size_sqm ?? item.sizeSqm ?? item.size,
         plotsCount: item.plots_count ?? item.plotsCount ?? item.plots ?? 1,
         bedrooms: item.bedrooms,
@@ -636,6 +637,11 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
     const rawPrice = property.priceNgn ?? (property as any).price ?? 0;
     const numericPrice = typeof rawPrice === 'number' ? rawPrice : Number(rawPrice) || 0;
 
+    const rawPriceUsd = property.priceUsd ?? (property as any).price_usd;
+    const numericPriceUsd = (rawPriceUsd !== undefined && rawPriceUsd !== null && rawPriceUsd !== '')
+      ? (typeof rawPriceUsd === 'number' ? rawPriceUsd : Number(rawPriceUsd) || 0)
+      : null;
+
     const safeTitle = (property.title || '').trim();
     const safeDescription = property.description?.trim() || 'Verified real estate property with clean title clearance.';
 
@@ -661,11 +667,12 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
     const rawAvailability = property.property_availability || (property as any).availability || 'available';
     const propertyAvailability = rawAvailability === 'sold' ? 'sold' : 'available';
 
-    // Base verified database payload matching confirmed table schema:
+    // Base verified database payload matching confirmed table schema (including price in Naira & price_usd in Dollars):
     const basePayload: Record<string, any> = {
       title: safeTitle,
       description: safeDescription,
       price: numericPrice,
+      price_usd: numericPriceUsd,
       location: locationString,
       property_type: propertyType,
       whatsapp_number: whatsappNum,

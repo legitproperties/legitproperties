@@ -50,7 +50,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const pricePerNight = property.priceNgn || 85000;
   const isShortStay = property.listing_type === 'short_stay' || property.price_unit === 'per_night' || property.category === 'short_stay';
+  const effectiveUsdPerNight = (property.priceUsd && property.priceUsd > 0) ? property.priceUsd : Math.round(pricePerNight / 1500);
   const totalAmount = isShortStay ? pricePerNight * nights : pricePerNight;
+  const totalAmountUsd = isShortStay ? effectiveUsdPerNight * nights : effectiveUsdPerNight;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,8 +213,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <div className="flex-1 min-w-0">
                   <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">{property.title}</h4>
                   <p className="text-[11px] text-slate-500 truncate">{property.location.neighborhood}, {property.location.city}</p>
-                  <div className="text-xs font-extrabold text-slate-900 mt-1">
-                    ₦{pricePerNight.toLocaleString()}{isShortStay ? ' / night' : ' total'}
+                  <div className="text-xs font-extrabold text-slate-900 mt-1 flex items-center gap-1.5 font-mono">
+                    <span>₦{pricePerNight.toLocaleString()}{isShortStay ? ' / night' : ' total'}</span>
+                    <span className="text-emerald-700 font-bold">(${effectiveUsdPerNight.toLocaleString()}{isShortStay ? ' / night' : ' total'})</span>
                   </div>
                 </div>
               </div>
@@ -351,7 +354,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   </div>
                   <div className="pt-2 border-t border-slate-800 flex items-center justify-between font-extrabold text-sm sm:text-base">
                     <span>Total Payable</span>
-                    <span className="text-emerald-400 font-mono">₦{totalAmount.toLocaleString()}</span>
+                    <div className="text-right font-mono">
+                      <span className="text-emerald-400">₦{totalAmount.toLocaleString()}</span>
+                      <span className="text-xs text-slate-300 ml-1.5 font-normal">(${totalAmountUsd.toLocaleString()})</span>
+                    </div>
                   </div>
                 </div>
               )}
