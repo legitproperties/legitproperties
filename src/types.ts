@@ -16,6 +16,8 @@ export type TitleStatus =
 
 export type CurrencyCode = 'NGN' | 'USD' | 'GBP';
 
+export type DisplayCurrency = 'NGN' | 'USD';
+
 export interface Property {
   id: string;
   title: string;
@@ -23,6 +25,8 @@ export interface Property {
   type: PropertyType;
   listing_type?: ListingType;
   price_unit?: PriceUnit;
+  currency?: DisplayCurrency;
+  display_currency?: DisplayCurrency;
   category: 'prime_land' | 'luxury_apartment' | 'investment_plot' | 'newly_listed' | 'executive_duplex' | 'diaspora_choice' | 'short_stay';
   purpose: 'Personal Home' | 'Investment' | 'Rental Income' | 'Retirement' | 'Commercial Use' | 'Vacation & Short Stay';
   location: {
