@@ -551,7 +551,7 @@ export const WordPressClassicEditor: React.FC<WordPressClassicEditorProps> = ({
                   {[
                     'Short Stay & Real Estate',
                     'Lagos Shortlet Guide',
-                    'Abuja Diplomatic Stays',
+                    'Lagos Luxury Residences',
                     'Title Verification & C of O',
                     'Diaspora Investment',
                     'Market Insights'

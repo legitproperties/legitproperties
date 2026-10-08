@@ -184,13 +184,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
     ].filter(Boolean);
 
     const stateMap: Record<SupportedCity, string> = {
-      Lagos: 'Lagos State',
-      Abuja: 'Federal Capital Territory',
-      'Port Harcourt': 'Rivers State',
-      Ibadan: 'Oyo State',
-      Edo: 'Edo State',
-      Enugu: 'Enugu State',
-      Anambra: 'Anambra State'
+      Lagos: 'Lagos State'
     };
 
     const payload: Partial<Property> = {
@@ -349,7 +343,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                   </select>
                 </div>
 
-                {/* Location Dropdown: Lagos, Abuja, Port Harcourt, Ibadan, Edo, Enugu, Anambra */}
+                {/* Location Dropdown: Lagos */}
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">
                     Location City *
@@ -360,12 +354,6 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                     className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900 bg-white font-bold cursor-pointer"
                   >
                     <option value="Lagos">Lagos</option>
-                    <option value="Abuja">Abuja</option>
-                    <option value="Port Harcourt">Port Harcourt</option>
-                    <option value="Ibadan">Ibadan</option>
-                    <option value="Edo">Edo</option>
-                    <option value="Enugu">Enugu</option>
-                    <option value="Anambra">Anambra</option>
                   </select>
                 </div>
 

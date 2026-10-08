@@ -47,63 +47,15 @@ const CITY_METADATA: Record<string, LocationMeta> = {
     keywords: 'Lagos shortlet · Lagos short stay apartments · Lagos Airbnb · 24/7 Uninterrupted Light · Private Chef Available',
     heroImage: shortStayHeroImg,
     ctaText: 'Explore Lagos Short Stays',
-    neighborhoods: ['Ikoyi', 'Victoria Island', 'Lekki Phase 1', 'Banana Island', 'Ikeja GRA', 'Eko Atlantic']
-  },
-  Abuja: {
-    title: 'Executive Short Stay Apartments in Abuja',
-    tagline: 'Diplomatic residences, skyline duplexes, and quiet luxury villas in Maitama, Asokoro, Guzape & Wuse 2.',
-    keywords: 'Abuja shortlet · Abuja short stay apartments · Abuja Airbnb · Diplomatic Security · High-Speed Fiber Internet',
-    heroImage: shortStayHeroImg,
-    ctaText: 'Explore Abuja Short Stays',
-    neighborhoods: ['Maitama', 'Asokoro', 'Guzape', 'Wuse 2', 'Jabi Lake', 'Gwarinpa']
-  },
-  'Port Harcourt': {
-    title: 'Short Stay Apartments in Port Harcourt (Rivers State)',
-    tagline: 'Upscale corporate residences, garden city villas, and waterfront executive flats in Old GRA, Peter Odili & Trans-Amadi.',
-    keywords: 'Port Harcourt shortlet · Rivers State short stay apartments · PH Airbnb · 24/7 Power Security Escort Available',
-    heroImage: shortStayHeroImg,
-    ctaText: 'Explore Port Harcourt Stays',
-    neighborhoods: ['Old GRA', 'Peter Odili Road', 'Trans-Amadi', 'Ada George', 'Woji', 'GRA Phase 2']
-  },
-  Ibadan: {
-    title: 'Short Stay Apartments in Ibadan',
-    tagline: 'Serene heritage penthouses and contemporary serviced suites in Bodija, Iyaganku GRA & Oluyole Estate.',
-    keywords: 'Ibadan shortlet · Ibadan short stay apartments · Ibadan Airbnb · Peaceful Ambience · Private Pool Suites',
-    heroImage: shortStayHeroImg,
-    ctaText: 'Explore Ibadan Short Stays',
-    neighborhoods: ['Bodija', 'Iyaganku GRA', 'Oluyole Estate', 'Jericho', 'Alalubosa GRA', 'Ring Road']
-  },
-  Edo: {
-    title: 'Short Stay Apartments in Edo State',
-    tagline: 'Executive suites, royal diaspora villas, and furnished vacation homes across Benin City & surrounding prime axes.',
-    keywords: 'Benin City shortlet · Edo short stay apartments · Edo Airbnb · Gated Luxury · Event Concierge Ready',
-    heroImage: shortStayHeroImg,
-    ctaText: 'Explore Edo Short Stays',
-    neighborhoods: ['GRA Benin City', 'Airport Road', 'Ugbor GRA', 'Boundary Road', 'Ihama Road', 'Sapele Road']
-  },
-  Enugu: {
-    title: 'Short Stay Apartments in Enugu',
-    tagline: 'Scenic coal-city hillside villas, golf course retreats, and serviced luxury apartments in Independence Layout & New Haven.',
-    keywords: 'Enugu shortlet · Enugu short stay apartments · Enugu Airbnb · Mountain Skyline Views · Executive Comfort',
-    heroImage: shortStayHeroImg,
-    ctaText: 'Explore Enugu Short Stays',
-    neighborhoods: ['Independence Layout', 'New Haven', 'Golf Estate', 'GRA Enugu', 'Trans-Ekulu', 'Rikita']
-  },
-  Anambra: {
-    title: 'Short Stay Apartments in Anambra',
-    tagline: 'Ultra-modern serviced apartments, luxury commercial executive lodges in Awka Capital & Onitsha Commercial Hub.',
-    keywords: 'Awka shortlet · Onitsha short stay apartments · Anambra Airbnb · 24/7 Solar Backup · VIP Chauffeur on Request',
-    heroImage: shortStayHeroImg,
-    ctaText: 'Explore Anambra Short Stays',
-    neighborhoods: ['Awka GRA', 'Nodu Okpuno', 'Onitsha GRA', 'Nnewi Executive Axis', 'Agu-Awka', 'Federal Housing']
+    neighborhoods: ['Ikoyi', 'Victoria Island', 'Lekki Phase 1', 'Banana Island', 'Ikeja GRA', 'Eko Atlantic', 'Ajah', 'Magodo']
   },
   for_sale_all: {
-    title: 'Verified Luxury Properties for Sale Across Nigeria',
+    title: 'Verified Luxury Properties for Sale in Lagos',
     tagline: 'Legally vetted lands with Certificate of Occupancy (C of O), Governor\'s Consent, and architectural mansions ready for title transfer.',
-    keywords: 'Nigeria properties for sale · Verified C of O land Lagos · Maitama Abuja houses · Diaspora title verification guaranteed',
+    keywords: 'Lagos properties for sale · Verified C of O land Lagos · Lekki mansions · Diaspora title verification guaranteed',
     heroImage: propertyForSaleHeroImg,
-    ctaText: 'Browse Properties for Sale',
-    neighborhoods: ['Lagos', 'Abuja', 'Port Harcourt', 'Ibadan', 'Edo', 'Enugu', 'Anambra']
+    ctaText: 'Browse Properties for Sale in Lagos',
+    neighborhoods: ['Ikoyi', 'Victoria Island', 'Lekki Phase 1', 'Banana Island', 'Ikeja GRA', 'Eko Atlantic', 'Ajah', 'Epe']
   }
 };
 
@@ -122,27 +74,20 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
   // Determine metadata
   const meta: LocationMeta = useMemo(() => {
     if (currentCategory === 'for_sale') {
-      if (currentCity !== 'all' && CITY_METADATA[currentCity]) {
-        return {
-          ...CITY_METADATA[currentCity],
-          title: `Properties for Sale in ${currentCity}`,
-          tagline: `Legally verified lands, off-plan developments, and finished duplexes in ${currentCity} with certified land registry records.`,
-          keywords: `${currentCity} property for sale · ${currentCity} lands with C of O · Direct Owner Deals · Safe Diaspora Escrow`,
-          ctaText: `Explore ${currentCity} Properties for Sale`,
-          heroImage: propertyForSaleHeroImg
-        };
-      }
       return {
         ...CITY_METADATA.for_sale_all,
+        title: 'Properties for Sale in Lagos',
+        tagline: 'Legally verified lands, off-plan developments, and finished duplexes in Lagos with certified land registry records.',
+        keywords: 'Lagos property for sale · Lagos lands with C of O · Direct Owner Deals · Safe Diaspora Escrow',
+        ctaText: 'Explore Lagos Properties for Sale',
         heroImage: propertyForSaleHeroImg
       };
     }
-    const shortStayBase = CITY_METADATA[currentCity] || CITY_METADATA.Lagos;
     return {
-      ...shortStayBase,
+      ...CITY_METADATA.Lagos,
       heroImage: shortStayHeroImg
     };
-  }, [currentCategory, currentCity]);
+  }, [currentCategory]);
 
   // Smooth scroll down to listings
   const handleCtaClick = () => {
@@ -157,9 +102,7 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
     let isMounted = true;
     setIsLoadingLive(true);
 
-    const queryLocation = currentCity === 'all' ? undefined : currentCity;
     fetchPropertiesFromSupabase({
-      location: queryLocation,
       listing_type: currentCategory
     }).then((data) => {
       if (isMounted) {
@@ -167,7 +110,7 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
         setIsLoadingLive(false);
       }
     }).catch((err) => {
-      console.error('Error fetching live properties from Supabase for', currentCity, err);
+      console.error('Error fetching live properties from Supabase:', err);
       if (isMounted) {
         setLiveProperties([]);
         setIsLoadingLive(false);
@@ -177,7 +120,7 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [currentCity, currentCategory]);
+  }, [currentCategory]);
 
   // Combine live query results with any parent properties
   const activePropertiesPool = useMemo(() => {
@@ -185,7 +128,7 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
     return properties || [];
   }, [liveProperties, properties]);
 
-  // Filter listings based on category and city
+  // Filter listings based on category and neighborhood
   const filteredListings = useMemo(() => {
     return activePropertiesPool.filter((p) => {
       // Category / Listing Type matching
@@ -206,14 +149,6 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
         if (isShortStay) return false;
       }
 
-      // City matching
-      if (currentCity !== 'all') {
-        const matchCity = p.location.city.toLowerCase().includes(currentCity.toLowerCase());
-        const matchState = p.location.state?.toLowerCase().includes(currentCity.toLowerCase());
-        const matchAddress = p.location.address?.toLowerCase().includes(currentCity.toLowerCase());
-        if (!matchCity && !matchState && !matchAddress) return false;
-      }
-
       // Neighborhood subfilter
       if (selectedNeighborhood !== 'all') {
         const matchNeigh =
@@ -228,30 +163,20 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
       if (sortBy === 'price_high') return b.priceNgn - a.priceNgn;
       return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
     });
-  }, [activePropertiesPool, currentCategory, currentCity, selectedNeighborhood, sortBy]);
-
-  const targetCities: SupportedCity[] = [
-    'Lagos',
-    'Abuja',
-    'Port Harcourt',
-    'Ibadan',
-    'Edo',
-    'Enugu',
-    'Anambra'
-  ];
+  }, [activePropertiesPool, currentCategory, selectedNeighborhood, sortBy]);
 
   return (
     <div className="min-h-screen bg-white text-slate-900 selection:bg-slate-900 selection:text-white">
       
-      {/* 1. Category & Location Filter Switcher Bar */}
+      {/* 1. Category Switcher & Lagos Hub Bar */}
       <nav className="border-b border-slate-200 bg-white/95 backdrop-blur-md sticky top-0 z-30" aria-label="Location Switcher">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             
             {/* Primary Category Switcher: Short Stays vs For Sale */}
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl shrink-0 self-start md:self-auto">
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl shrink-0 self-start sm:self-auto">
               <button
-                onClick={() => onNavigateCity(currentCity === 'all' ? 'Lagos' : currentCity, 'short_stay')}
+                onClick={() => onNavigateCity('Lagos', 'short_stay')}
                 className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   currentCategory === 'short_stay'
                     ? 'bg-slate-900 text-white shadow-xs'
@@ -261,7 +186,7 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
                 Short-Stay Apartments
               </button>
               <button
-                onClick={() => onNavigateCity('all', 'for_sale')}
+                onClick={() => onNavigateCity('Lagos', 'for_sale')}
                 className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   currentCategory === 'for_sale'
                     ? 'bg-slate-900 text-white shadow-xs'
@@ -272,34 +197,12 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
               </button>
             </div>
 
-            {/* City Tabs */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-              {currentCategory === 'for_sale' && (
-                <button
-                  onClick={() => onNavigateCity('all', 'for_sale')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-                    currentCity === 'all'
-                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  All Cities
-                </button>
-              )}
-
-              {targetCities.map((city) => (
-                <button
-                  key={city}
-                  onClick={() => onNavigateCity(city, currentCategory)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-                    currentCity === city
-                      ? 'bg-slate-900 text-white font-bold shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  {city}
-                </button>
-              ))}
+            {/* Exclusive Lagos Location Badge */}
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-800 shadow-2xs">
+                <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Lagos, Nigeria</span>
+              </div>
             </div>
 
           </div>
@@ -321,7 +224,7 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
                   <span>Verified Legit Properties</span>
                 </span>
                 <span aria-hidden="true">·</span>
-                <span>{currentCity === 'all' ? 'All Nigeria Hubs' : `${currentCity}, Nigeria`}</span>
+                <span>Lagos, Nigeria</span>
               </div>
 
               {/* Title */}
@@ -394,7 +297,7 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
                     <p className="text-[11px] text-slate-500">Direct host contact & instant check-in</p>
                   </div>
                   <span className="px-2.5 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-lg">
-                    {currentCity}
+                    Lagos
                   </span>
                 </div>
               </div>
@@ -414,7 +317,7 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
               {currentCategory === 'short_stay' ? 'Curated Short Stays' : 'Vetted Real Estate Inventory'}
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-950 mt-1">
-              Active Listings in {currentCity === 'all' ? 'Nigeria' : currentCity}
+              Active Listings in Lagos
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
               Showing <strong className="text-slate-900">{filteredListings.length}</strong> available {currentCategory === 'short_stay' ? 'apartments' : 'properties'} ready for immediate booking or inspection

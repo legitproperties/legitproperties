@@ -59,7 +59,7 @@ function AdminRouteView({ onNavigate }: { onNavigate: (path: string) => void }) 
   );
 }
 
-function parseAppRoute(): { isAdmin: boolean; category: ListingType; city: SupportedCity | 'all' } {
+function parseAppRoute(): { isAdmin: boolean; category: ListingType; city: SupportedCity } {
   if (typeof window === 'undefined') {
     return { isAdmin: false, category: 'short_stay', city: 'Lagos' };
   }
@@ -77,23 +77,8 @@ function parseAppRoute(): { isAdmin: boolean; category: ListingType; city: Suppo
   }
 
   if (path.includes('for-sale') || path.includes('for_sale') || path.includes('properties-for-sale')) {
-    if (path.includes('lagos')) return { isAdmin: false, category: 'for_sale', city: 'Lagos' };
-    if (path.includes('abuja')) return { isAdmin: false, category: 'for_sale', city: 'Abuja' };
-    if (path.includes('port-harcourt') || path.includes('port_harcourt')) return { isAdmin: false, category: 'for_sale', city: 'Port Harcourt' };
-    if (path.includes('ibadan')) return { isAdmin: false, category: 'for_sale', city: 'Ibadan' };
-    if (path.includes('edo')) return { isAdmin: false, category: 'for_sale', city: 'Edo' };
-    if (path.includes('enugu')) return { isAdmin: false, category: 'for_sale', city: 'Enugu' };
-    if (path.includes('anambra')) return { isAdmin: false, category: 'for_sale', city: 'Anambra' };
-    return { isAdmin: false, category: 'for_sale', city: 'all' };
+    return { isAdmin: false, category: 'for_sale', city: 'Lagos' };
   }
-
-  // Short stay destinations
-  if (path.includes('abuja')) return { isAdmin: false, category: 'short_stay', city: 'Abuja' };
-  if (path.includes('port-harcourt') || path.includes('port_harcourt')) return { isAdmin: false, category: 'short_stay', city: 'Port Harcourt' };
-  if (path.includes('ibadan')) return { isAdmin: false, category: 'short_stay', city: 'Ibadan' };
-  if (path.includes('edo')) return { isAdmin: false, category: 'short_stay', city: 'Edo' };
-  if (path.includes('enugu')) return { isAdmin: false, category: 'short_stay', city: 'Enugu' };
-  if (path.includes('anambra')) return { isAdmin: false, category: 'short_stay', city: 'Anambra' };
 
   return { isAdmin: false, category: 'short_stay', city: 'Lagos' };
 }
@@ -142,21 +127,21 @@ function MainApp() {
     }
 
     if (currentCategory === 'short_stay') {
-      document.title = `Luxury Short Stay Apartments in ${currentCity === 'all' ? 'Nigeria' : currentCity} | Legit Properties`;
+      document.title = 'Luxury Short Stay Apartments in Lagos | Legit Properties';
       const metaDesc = document.querySelector('meta[name="description"]');
       if (metaDesc) {
         metaDesc.setAttribute(
           'content',
-          `Book hand-picked, verified short stay apartments and luxury shortlets in ${currentCity} with 24/7 uninterrupted power, high-speed fiber Wi-Fi, and direct host WhatsApp.`
+          'Book hand-picked, verified short stay apartments and luxury shortlets in Lagos with 24/7 uninterrupted power, high-speed fiber Wi-Fi, and direct host WhatsApp.'
         );
       }
     } else {
-      document.title = `Verified Properties for Sale in ${currentCity === 'all' ? 'Nigeria' : currentCity} | Legit Properties`;
+      document.title = 'Verified Properties for Sale in Lagos | Legit Properties';
       const metaDesc = document.querySelector('meta[name="description"]');
       if (metaDesc) {
         metaDesc.setAttribute(
           'content',
-          `Buy legally vetted lands, off-plan duplexes, and luxury residences in ${currentCity} with certified C of O, Governor's Consent, and land registry records.`
+          'Buy legally vetted lands, off-plan duplexes, and luxury residences in Lagos with certified C of O, Governor\'s Consent, and land registry records.'
         );
       }
     }
@@ -174,46 +159,43 @@ function MainApp() {
       '@context': 'https://schema.org',
       '@type': currentCategory === 'short_stay' ? 'LodgingBusiness' : 'RealEstateAgent',
       name: 'Legit Properties',
-      description: `Premium short-stay apartments and verified real estate across Nigeria in Lagos, Abuja, Port Harcourt, Ibadan, Edo, Enugu, and Anambra.`,
+      description: 'Premium short-stay apartments and verified real estate in Lagos, Nigeria.',
       url: typeof window !== 'undefined' ? window.location.href : 'https://legitproperties.com',
       address: {
         '@type': 'PostalAddress',
-        addressLocality: currentCity === 'all' ? 'Lagos' : currentCity,
+        addressLocality: 'Lagos',
         addressCountry: 'NG'
       },
       priceRange: '₦₦₦₦'
     };
 
     scriptTag.textContent = JSON.stringify(schemaData);
-  }, [routeState.isAdmin, currentCategory, currentCity]);
+  }, [routeState.isAdmin, currentCategory]);
 
   // Navigate function
   const navigateTo = (path: string) => {
     if (typeof window !== 'undefined') {
       if (path.startsWith('/admin')) {
         window.history.pushState(null, '', '#/admin');
-        setRouteState({ isAdmin: true, category: currentCategory, city: currentCity });
+        setRouteState({ isAdmin: true, category: currentCategory, city: 'Lagos' });
       } else {
         window.history.pushState(null, '', path);
         const parsed = parseAppRoute();
         setRouteState(parsed);
         setCurrentCategory(parsed.category);
-        setCurrentCity(parsed.city);
+        setCurrentCity('Lagos');
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const handleNavigateCity = (city: SupportedCity | 'all', category: 'short_stay' | 'for_sale') => {
-    setCurrentCity(city);
+    setCurrentCity('Lagos');
     setCurrentCategory(category);
 
-    const slugCity = city === 'all' ? 'all' : city.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const newHash = category === 'short_stay' 
-      ? `#/short-stay/${slugCity}` 
-      : city === 'all' 
-      ? `#/properties-for-sale` 
-      : `#/for-sale/${slugCity}`;
+      ? '#/short-stay/lagos' 
+      : '#/properties-for-sale';
 
     if (typeof window !== 'undefined') {
       window.history.pushState(null, '', newHash);

@@ -19,7 +19,7 @@ export const FaqModal: React.FC<FaqModalProps> = ({ isOpen, onClose, onOpenTitle
   const faqs: FaqItem[] = [
     {
       q: 'How does legitproperties guarantee 100% title verification?',
-      a: 'Before any property is published, our team of property lawyers conducts a physical search at the Alausa Lands Registry (Lagos), AGIS (Abuja), or the respective State Ministry of Lands. We verify file numbers, chart survey coordinates against government acquisitions, and confirm zero pending litigation.',
+      a: 'Before any property is published, our team of property lawyers conducts a physical search at the Alausa Lands Registry in Lagos. We verify file numbers, chart survey coordinates against government acquisitions, and confirm zero pending litigation.',
       category: 'Verification'
     },
     {

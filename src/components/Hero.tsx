@@ -188,10 +188,7 @@ export const Hero: React.FC<HeroProps> = ({
                 onChange={(e) => onFilterChange({ city: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all cursor-pointer"
               >
-                <option value="all">All Locations (Lagos, Abuja, PH)</option>
                 <option value="Lagos">Lagos (Lekki, Ikoyi, Epe, VGC, Victoria Island)</option>
-                <option value="Abuja">Abuja FCT (Maitama, Guzape, Katampe)</option>
-                <option value="Port Harcourt">Port Harcourt (Trans Amadi & GRA)</option>
               </select>
             </div>
 
@@ -236,7 +233,7 @@ export const Hero: React.FC<HeroProps> = ({
           {/* Action CTA Trigger */}
           <div className="mt-4 pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="text-xs text-slate-500 font-medium text-center sm:text-left">
-              Popular: <span className="text-slate-700 font-semibold">Lekki Phase 1 • Epe Expressway • Maitama Abuja • C of O Titles</span>
+              Popular: <span className="text-slate-700 font-semibold">Lekki Phase 1 • Epe Expressway • Ikoyi • Victoria Island • C of O Titles</span>
             </div>
 
             <button
@@ -274,7 +271,7 @@ export const Hero: React.FC<HeroProps> = ({
                 <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-900 group-hover:translate-x-1 transition-all" />
               </h3>
               <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                Commercial & residential plots in Lekki, Epe, & Abuja with instant physical allocation.
+                Commercial & residential plots in Lekki, Epe, & Ikoyi with instant physical allocation.
               </p>
             </div>
 

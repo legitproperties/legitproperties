@@ -448,35 +448,11 @@ export async function fetchPropertiesFromSupabase(filters?: PropertyQueryFilters
             parsedLocation = { address: item.location, neighborhood: item.location, city: 'Lagos', state: 'Lagos State' };
           }
         } else {
-          const locLower = String(item.location || '').toLowerCase();
-          let recognizedCity = 'Lagos';
-          let recognizedState = 'Lagos State';
-
-          if (locLower.includes('abuja')) {
-            recognizedCity = 'Abuja';
-            recognizedState = 'Federal Capital Territory';
-          } else if (locLower.includes('port harcourt') || locLower.includes('rivers')) {
-            recognizedCity = 'Port Harcourt';
-            recognizedState = 'Rivers State';
-          } else if (locLower.includes('ibadan') || locLower.includes('oyo')) {
-            recognizedCity = 'Ibadan';
-            recognizedState = 'Oyo State';
-          } else if (locLower.includes('edo') || locLower.includes('benin')) {
-            recognizedCity = 'Edo';
-            recognizedState = 'Edo State';
-          } else if (locLower.includes('enugu')) {
-            recognizedCity = 'Enugu';
-            recognizedState = 'Enugu State';
-          } else if (locLower.includes('anambra') || locLower.includes('awka') || locLower.includes('onitsha')) {
-            recognizedCity = 'Anambra';
-            recognizedState = 'Anambra State';
-          }
-
           parsedLocation = {
             address: item.location,
             neighborhood: item.location,
-            city: recognizedCity,
-            state: recognizedState
+            city: 'Lagos',
+            state: 'Lagos State'
           };
         }
       } else {

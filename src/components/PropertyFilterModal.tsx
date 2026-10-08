@@ -81,10 +81,7 @@ export const PropertyFilterModal: React.FC<PropertyFilterModalProps> = ({
               onChange={(e) => onFilterChange({ city: e.target.value })}
               className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
             >
-              <option value="all">All Locations (Lagos, Abuja, Port Harcourt)</option>
-              <option value="Lagos">Lagos State (Lekki, Ikoyi, VGC, Epe)</option>
-              <option value="Abuja">Abuja FCT (Maitama, Guzape, Katampe)</option>
-              <option value="Port Harcourt">Port Harcourt (Trans Amadi)</option>
+              <option value="Lagos">Lagos State (Lekki, Ikoyi, Victoria Island, Ikeja)</option>
             </select>
           </div>
 

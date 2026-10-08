@@ -197,8 +197,8 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
             </div>
           )}
 
-          {/* Physical Location Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Physical Location Card */}
+          <div className="grid grid-cols-1 gap-3">
             <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
               <div className="flex items-center gap-2 font-bold text-xs text-[#102033]">
                 <MapPin className="w-4 h-4 text-[#167A5A]" />
@@ -206,16 +206,6 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
               </div>
               <p className="text-xs text-slate-500">
                 Admiralty Way, Lekki Phase 1, Lagos State, Nigeria
-              </p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
-              <div className="flex items-center gap-2 font-bold text-xs text-[#102033]">
-                <MapPin className="w-4 h-4 text-[#167A5A]" />
-                <span>Abuja FCT Regional Office</span>
-              </div>
-              <p className="text-xs text-slate-500">
-                Diplomatic Drive, Maitama District, FCT Abuja
               </p>
             </div>
           </div>

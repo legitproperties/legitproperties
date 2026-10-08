@@ -3,7 +3,7 @@ export type PropertyType = 'short_stay' | 'for_sale' | 'apartment' | 'house' | '
 export type ListingType = 'short_stay' | 'for_sale';
 export type PriceUnit = 'per_night' | 'total';
 
-export type SupportedCity = 'Lagos' | 'Abuja' | 'Port Harcourt' | 'Ibadan' | 'Edo' | 'Enugu' | 'Anambra';
+export type SupportedCity = 'Lagos';
 
 export type TitleStatus = 
   | 'Certificate of Occupancy (C of O)'

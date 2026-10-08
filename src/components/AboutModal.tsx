@@ -54,7 +54,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({
               <span>Our Core Purpose</span>
             </h4>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              <strong>legitproperties</strong> was founded to permanently eradicate land grabbing, double-allocation fraud, and unverified titles in the Nigerian real estate sector. Every land plot, residential duplex, or luxury apartment listed on our platform undergoes a mandatory 7-stage legal search at Alausa Land Registry (Lagos) and AGIS (Abuja).
+              <strong>legitproperties</strong> was founded to permanently eradicate land grabbing, double-allocation fraud, and unverified titles in the Nigerian real estate sector. Every land plot, residential duplex, or luxury apartment listed on our platform undergoes a mandatory 7-stage legal search at Alausa Land Registry (Lagos).
             </p>
           </div>
 
@@ -96,24 +96,13 @@ export const AboutModal: React.FC<AboutModalProps> = ({
             <h4 className="text-xs font-extrabold text-[#102033] uppercase tracking-wider">
               Physical Corporate Headquarters
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-[#167A5A] flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-xs font-bold text-[#102033]">Lagos State HQ</div>
+                  <div className="text-xs font-bold text-[#102033]">Lagos State Headquarters</div>
                   <div className="text-xs text-slate-500 mt-0.5">
                     Admiralty Way, Lekki Phase 1, Lagos State, Nigeria
-                  </div>
-                  <div className="text-[11px] font-semibold text-emerald-700 mt-1">Mon - Sat: 8:00 AM - 6:00 PM</div>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-[#167A5A] flex-shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-xs font-bold text-[#102033]">Abuja FCT Regional Office</div>
-                  <div className="text-xs text-slate-500 mt-0.5">
-                    Diplomatic Drive, Maitama District, FCT Abuja
                   </div>
                   <div className="text-[11px] font-semibold text-emerald-700 mt-1">Mon - Sat: 8:00 AM - 6:00 PM</div>
                 </div>

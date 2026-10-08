@@ -39,26 +39,19 @@ export const Footer: React.FC<FooterProps> = ({
             </p>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-[11px] font-bold text-slate-300">
               <Lock className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Ministry Land Audit & AGIS Certified</span>
+              <span>Ministry Land Audit & Alausa Registry Certified</span>
             </div>
           </div>
 
           {/* Physical Offices & Contact */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-white">Physical Offices</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white">Physical Headquarters</h4>
             <div className="space-y-2.5 text-slate-400 text-xs">
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
                 <span>
                   <strong className="text-white block font-semibold">Lagos HQ:</strong>
                   Admiralty Way, Lekki Phase 1, Lagos, Nigeria
-                </span>
-              </div>
-              <div className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
-                <span>
-                  <strong className="text-white block font-semibold">Abuja Office:</strong>
-                  Diplomatic Drive, Maitama District, FCT Abuja
                 </span>
               </div>
               <button

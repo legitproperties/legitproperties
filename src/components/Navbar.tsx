@@ -36,13 +36,7 @@ interface NavbarProps {
 }
 
 const NIGERIAN_CITIES: { id: SupportedCity; label: string; state: string }[] = [
-  { id: 'Lagos', label: 'Lagos', state: 'Ikoyi, VI & Lekki' },
-  { id: 'Abuja', label: 'Abuja', state: 'Maitama, Guzape & Wuse' },
-  { id: 'Port Harcourt', label: 'Port Harcourt', state: 'Old GRA & Trans-Amadi' },
-  { id: 'Ibadan', label: 'Ibadan', state: 'Bodija & Oluyole' },
-  { id: 'Edo', label: 'Edo', state: 'Benin City GRA' },
-  { id: 'Enugu', label: 'Enugu', state: 'Independence Layout' },
-  { id: 'Anambra', label: 'Anambra', state: 'Awka & Onitsha' },
+  { id: 'Lagos', label: 'Lagos', state: 'Ikoyi, Victoria Island, Lekki & Ikeja' },
 ];
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -188,7 +182,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-3 flex items-center justify-between">
                       <span>Short Stay Apartments</span>
                       <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                        7 Nigerian Cities
+                        Lagos, Nigeria
                       </span>
                     </div>
                     <div className="grid grid-cols-1 gap-1.5">
@@ -204,7 +198,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                             </div>
                             <div>
                               <div className="text-xs font-bold text-slate-900 group-hover:text-slate-950">
-                                Short Stay in {city.label}
+                                Short Stay in Lagos
                               </div>
                               <div className="text-[10px] text-slate-600">{city.state}</div>
                             </div>
@@ -224,7 +218,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       onClick={() => {
                         setIsDrawerOpen(false);
                         if (onNavigateCity) {
-                          onNavigateCity('all', 'for_sale');
+                          onNavigateCity('Lagos', 'for_sale');
                         }
                       }}
                       className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 transition-all text-left cursor-pointer group"
@@ -234,7 +228,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <Building2 className="w-4 h-4 text-emerald-400" />
                         </div>
                         <div>
-                          <div className="text-xs font-bold text-slate-900">Properties for Sale</div>
+                          <div className="text-xs font-bold text-slate-900">Properties for Sale in Lagos</div>
                           <div className="text-[11px] text-slate-600">Lands with C of O & Luxury Mansions</div>
                         </div>
                       </div>

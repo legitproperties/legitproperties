@@ -15,6 +15,79 @@ export const formatUsd = (usdAmount: number): string => {
 };
 
 /**
+ * Resolves and formats the exclusive currency price that shows on the live app.
+ * If property selected currency is 'USD', returns strictly the Dollar ($) price.
+ * If property selected currency is 'NGN', returns strictly the Naira (₦) price.
+ * Never displays both currencies side by side on live views!
+ */
+export const formatPropertyPrice = (
+  property: {
+    priceNgn: number;
+    priceUsd?: number | null;
+    currency?: 'NGN' | 'USD' | string;
+    display_currency?: 'NGN' | 'USD' | string;
+    price_unit?: string;
+    listing_type?: string;
+    category?: string;
+  },
+  customUnitLabel?: string
+): {
+  currency: 'NGN' | 'USD';
+  symbol: string;
+  amount: number;
+  formatted: string;
+  compact: string;
+  unitLabel: string;
+} => {
+  const isUsd = property.currency === 'USD' || property.display_currency === 'USD';
+  const isShortStay =
+    property.listing_type === 'short_stay' ||
+    property.price_unit === 'per_night' ||
+    property.category === 'short_stay';
+
+  const unitLabel = customUnitLabel !== undefined
+    ? customUnitLabel
+    : (isShortStay ? ' / night' : '');
+
+  if (isUsd) {
+    const rawUsd = property.priceUsd;
+    const usdAmount = (rawUsd !== undefined && rawUsd !== null && Number(rawUsd) > 0)
+      ? Number(rawUsd)
+      : (property.priceNgn ? Math.round(Number(property.priceNgn) / USD_RATE) : 0);
+
+    const formatted = `$${usdAmount.toLocaleString('en-US')}${unitLabel}`;
+    const compact = usdAmount >= 1000000
+      ? `$${(usdAmount / 1000000).toFixed(1)}M`
+      : usdAmount >= 1000
+        ? `$${(usdAmount / 1000).toFixed(0)}K`
+        : `$${usdAmount}`;
+
+    return {
+      currency: 'USD',
+      symbol: '$',
+      amount: usdAmount,
+      formatted,
+      compact,
+      unitLabel
+    };
+  }
+
+  // Default: NGN (Naira)
+  const ngnAmount = Number(property.priceNgn) || 0;
+  const formatted = `₦${ngnAmount.toLocaleString('en-NG')}${unitLabel}`;
+  const compact = formatCompactPrice(ngnAmount, 'NGN');
+
+  return {
+    currency: 'NGN',
+    symbol: '₦',
+    amount: ngnAmount,
+    formatted,
+    compact,
+    unitLabel
+  };
+};
+
+/**
  * Format dual currency prices (Naira ₦ and US Dollars $)
  * If priceUsd is specified, uses that; otherwise converts priceNgn at USD_RATE.
  */

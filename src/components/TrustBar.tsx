@@ -91,7 +91,7 @@ export const TrustBar: React.FC<TrustBarProps> = ({ onOpenTitleCheck }) => {
               <span>Independent Land Title Audit</span>
             </div>
             <h4 className="text-lg sm:text-xl font-bold text-white">
-              Already have an eye on a property in Lagos or Abuja?
+              Already have an eye on a property in Lagos?
             </h4>
             <p className="text-xs sm:text-sm text-slate-300">
               Enter any survey reference number or title deed to verify ownership and avoid disputes.

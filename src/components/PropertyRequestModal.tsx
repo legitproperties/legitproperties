@@ -117,7 +117,7 @@ export const PropertyRequestModal: React.FC<PropertyRequestModalProps> = ({
                   type="text"
                   value={formData.preferredLocation}
                   onChange={(e) => setFormData({ ...formData, preferredLocation: e.target.value })}
-                  placeholder="e.g. Lekki, Ikoyi, Katampe, Epe"
+                  placeholder="e.g. Lekki, Ikoyi, Victoria Island, Ikeja GRA, Epe"
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-[#102033] focus:outline-none focus:ring-2 focus:ring-[#167A5A]/20"
                 />
               </div>
