@@ -51,7 +51,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
     propertyToEdit?.price_unit || (listingType === 'short_stay' ? 'per_night' : 'total')
   );
 
-  // 3. Location (Clean dropdown containing official locations: Awoyaya, Ajah, Royal Garden Estate, Abraham Adesanya Estate, Ikota, Sangotedo, Thomas Estate)
+  // 3. Location (Clean dropdown containing master list of Lagos corridor neighborhoods)
   const [selectedLocation, setSelectedLocation] = useState<AdminLocationOption>(() => {
     return resolveAdminLocation(propertyToEdit);
   });
@@ -348,7 +348,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                   </select>
                 </div>
 
-                {/* Clean Location Dropdown Selection containing exact 7 official locations */}
+                {/* Clean Location Dropdown Selection containing master list of Lagos corridor neighborhoods */}
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
                     <span>Location *</span>

@@ -6,12 +6,25 @@ export type PriceUnit = 'per_night' | 'total';
 export type SupportedCity = 'Lagos';
 
 export const ADMIN_LOCATION_OPTIONS = [
-  'Awoyaya',
+  'Ikoyi',
+  'Victoria Island / Oniru',
+  'Lekki Phase 1',
+  'Ikate Elegushi',
+  'Jakande',
+  'Osapa London',
+  'Agungi',
+  'Igbo Efon',
+  'Ologolo',
+  'Idado',
+  'Chevron Drive',
+  'Orchid Road',
+  'Ikota',
+  'Victoria Garden City (VGC)',
   'Ajah',
   'Royal Garden Estate',
   'Abraham Adesanya Estate',
-  'Ikota',
   'Sangotedo',
+  'Awoyaya',
   'Thomas Estate'
 ] as const;
 

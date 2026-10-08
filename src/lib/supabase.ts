@@ -17,16 +17,36 @@ export function resolveAdminLocation(propLike?: any): AdminLocationOption {
 
   const lower = raw.toLowerCase();
 
+  // 1. Direct exact match
   for (const opt of ADMIN_LOCATION_OPTIONS) {
     if (lower === opt.toLowerCase()) return opt;
   }
 
+  // 2. Direct full-string containment
+  for (const opt of ADMIN_LOCATION_OPTIONS) {
+    if (lower.includes(opt.toLowerCase())) return opt;
+  }
+
+  // 3. Keyword / alias / corridor matching
+  if (lower.includes('ikoyi')) return 'Ikoyi';
+  if (lower.includes('victoria island') || lower.includes('oniru') || lower.includes(' v.i') || lower.includes(' vi ')) return 'Victoria Island / Oniru';
+  if (lower.includes('lekki phase 1') || lower.includes('lekki 1') || lower.includes('phase 1')) return 'Lekki Phase 1';
+  if (lower.includes('ikate') || lower.includes('elegushi')) return 'Ikate Elegushi';
+  if (lower.includes('jakande')) return 'Jakande';
+  if (lower.includes('osapa')) return 'Osapa London';
+  if (lower.includes('agungi')) return 'Agungi';
+  if (lower.includes('igbo efon') || lower.includes('igbefon')) return 'Igbo Efon';
+  if (lower.includes('ologolo')) return 'Ologolo';
+  if (lower.includes('idado')) return 'Idado';
+  if (lower.includes('chevron')) return 'Chevron Drive';
+  if (lower.includes('orchid')) return 'Orchid Road';
+  if (lower.includes('vgc') || lower.includes('victoria garden city')) return 'Victoria Garden City (VGC)';
   if (lower.includes('royal garden')) return 'Royal Garden Estate';
   if (lower.includes('abraham adesanya')) return 'Abraham Adesanya Estate';
   if (lower.includes('thomas estate') || lower.includes('thomas')) return 'Thomas Estate';
   if (lower.includes('sangotedo')) return 'Sangotedo';
-  if (lower.includes('ikota')) return 'Ikota';
   if (lower.includes('awoyaya')) return 'Awoyaya';
+  if (lower.includes('ikota')) return 'Ikota';
   if (lower.includes('ajah')) return 'Ajah';
 
   return 'Ajah';
