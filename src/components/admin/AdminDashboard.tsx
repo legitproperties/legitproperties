@@ -31,7 +31,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
-import { Property, BlogPost, PropertyRequestLead, BookingRequest } from '../../types';
+import { Property, BlogPost, PropertyRequestLead, BookingRequest, ADMIN_LOCATION_OPTIONS } from '../../types';
 import {
   supabase,
   fetchPropertiesFromSupabase,
@@ -88,6 +88,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoToPublicSite
 
   // Search filters inside admin tabs
   const [propertySearchQuery, setPropertySearchQuery] = useState('');
+  const [selectedLocationFilter, setSelectedLocationFilter] = useState<string>('all');
   const [blogSearchQuery, setBlogSearchQuery] = useState('');
   const [leadsSearchQuery, setLeadsSearchQuery] = useState('');
 
@@ -655,7 +656,7 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
                         <tr className="border-b border-slate-700 text-slate-400">
                           <th className="pb-3 font-semibold">Title & Category</th>
                           <th className="pb-3 font-semibold">Location</th>
-                          <th className="pb-3 font-semibold">Price (NGN)</th>
+                          <th className="pb-3 font-semibold">Price (NGN / USD)</th>
                           <th className="pb-3 font-semibold">Title Status</th>
                           <th className="pb-3 font-semibold text-right">Actions</th>
                         </tr>
@@ -676,8 +677,8 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
                                 <div className="text-[10px] text-slate-400 font-normal">{prop.category}</div>
                               </div>
                             </td>
-                            <td className="py-3 text-slate-300">
-                              {prop.location?.neighborhood}, {prop.location?.city}
+                            <td className="py-3 text-slate-300 font-medium">
+                              {prop.location?.neighborhood || prop.location_name || 'Ajah'}, Lagos
                             </td>
                             <td className="py-3">
                               <div className="font-bold text-emerald-400 font-mono">
@@ -744,7 +745,7 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
                   <p className="text-xs text-slate-400">Publish, modify, and audit all lands and luxury apartments</p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2.5">
                   <div className="relative">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                     <input
@@ -755,6 +756,20 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
                       className="pl-9 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-[#167A5A]"
                     />
                   </div>
+
+                  {/* Clean Location Filter Dropdown */}
+                  <select
+                    value={selectedLocationFilter}
+                    onChange={(e) => setSelectedLocationFilter(e.target.value)}
+                    className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white font-medium focus:outline-none focus:border-[#167A5A] cursor-pointer"
+                  >
+                    <option value="all">All Locations (Lagos)</option>
+                    {ADMIN_LOCATION_OPTIONS.map((loc) => (
+                      <option key={loc} value={loc}>
+                        📍 {loc}
+                      </option>
+                    ))}
+                  </select>
 
                   <button
                     onClick={() => {
@@ -772,7 +787,22 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
               {/* Grid of properties */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {propertiesList
-                  .filter(p => p.title.toLowerCase().includes(propertySearchQuery.toLowerCase()) || p.location.city.toLowerCase().includes(propertySearchQuery.toLowerCase()))
+                  .filter((p) => {
+                    const query = propertySearchQuery.toLowerCase();
+                    const matchesSearch =
+                      !query ||
+                      p.title.toLowerCase().includes(query) ||
+                      (p.location_name && p.location_name.toLowerCase().includes(query)) ||
+                      (p.location?.neighborhood && p.location.neighborhood.toLowerCase().includes(query)) ||
+                      (p.location?.address && p.location.address.toLowerCase().includes(query));
+
+                    const matchesLocation =
+                      selectedLocationFilter === 'all' ||
+                      (p.location_name && p.location_name.toLowerCase() === selectedLocationFilter.toLowerCase()) ||
+                      (p.location?.neighborhood && p.location.neighborhood.toLowerCase() === selectedLocationFilter.toLowerCase());
+
+                    return matchesSearch && matchesLocation;
+                  })
                   .map((prop) => (
                     <div key={prop.id} className="bg-slate-800/90 border border-slate-700/80 rounded-2xl overflow-hidden shadow-lg flex flex-col">
                       <div className="relative h-44 bg-slate-700">
@@ -812,7 +842,7 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
                           <h4 className="font-bold text-white text-sm line-clamp-1">{prop.title}</h4>
                           <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
                             <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                            <span>{prop.location.neighborhood}, {prop.location.city}</span>
+                            <span>{prop.location?.neighborhood || prop.location_name || 'Ajah'}, Lagos</span>
                           </p>
                         </div>
 

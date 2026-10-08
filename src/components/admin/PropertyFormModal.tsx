@@ -14,7 +14,8 @@ import {
   Sparkles,
   ArrowLeftRight
 } from 'lucide-react';
-import { Property, SupportedCity, ListingType, PriceUnit, TitleStatus } from '../../types';
+import { Property, SupportedCity, ListingType, PriceUnit, TitleStatus, ADMIN_LOCATION_OPTIONS, AdminLocationOption } from '../../types';
+import { resolveAdminLocation } from '../../lib/supabase';
 
 interface PropertyFormModalProps {
   isOpen: boolean;
@@ -50,12 +51,15 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
     propertyToEdit?.price_unit || (listingType === 'short_stay' ? 'per_night' : 'total')
   );
 
-  // 3. Location
-  const [city, setCity] = useState<SupportedCity>(
-    (propertyToEdit?.location?.city as SupportedCity) || 'Lagos'
+  // 3. Location (Clean dropdown containing official locations: Awoyaya, Ajah, Royal Garden Estate, Abraham Adesanya Estate, Ikota, Sangotedo, Thomas Estate)
+  const [selectedLocation, setSelectedLocation] = useState<AdminLocationOption>(() => {
+    return resolveAdminLocation(propertyToEdit);
+  });
+  const [specificAddress, setSpecificAddress] = useState<string>(
+    propertyToEdit?.location?.address && propertyToEdit.location.address !== propertyToEdit.location.neighborhood
+      ? propertyToEdit.location.address
+      : ''
   );
-  const [neighborhood, setNeighborhood] = useState(propertyToEdit?.location?.neighborhood || '');
-  const [address, setAddress] = useState(propertyToEdit?.location?.address || '');
 
   // 4. Price & Specs (Dual-Currency: Naira ₦ & Dollar $)
   const initialNgn = propertyToEdit?.priceNgn || (listingType === 'short_stay' ? 150000 : 75000000);
@@ -201,11 +205,12 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       category: listingType === 'short_stay' ? 'short_stay' : 'luxury_apartment',
       purpose: listingType === 'short_stay' ? 'Vacation & Short Stay' : 'Investment',
       location: {
-        address: address.trim() || `${neighborhood || city}, ${stateMap[city]}`,
-        neighborhood: neighborhood.trim() || city,
-        city,
-        state: stateMap[city]
+        address: specificAddress.trim() ? `${specificAddress.trim()}, ${selectedLocation}, Lagos` : `${selectedLocation}, Lagos`,
+        neighborhood: selectedLocation,
+        city: 'Lagos',
+        state: 'Lagos State'
       },
+      location_name: selectedLocation,
       priceNgn: Number(priceNgn) || 0,
       priceUsd: (priceUsd !== '' && priceUsd !== null && !isNaN(Number(priceUsd))) 
         ? Number(priceUsd) 
@@ -222,7 +227,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       property_availability: propertyAvailability,
       titleStatus,
       titleVerified: true,
-      verificationDocNo: propertyToEdit?.verificationDocNo || `LEGIT/${city.toUpperCase()}/2026`,
+      verificationDocNo: propertyToEdit?.verificationDocNo || `LEGIT/LAGOS/2026`,
       developerInfo: propertyToEdit?.developerInfo || {
         name: 'Legit Verified Direct Host',
         trackRecord: '5+ Years Clean Inspection Record',
@@ -343,17 +348,24 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
                   </select>
                 </div>
 
-                {/* Location Dropdown: Lagos */}
+                {/* Clean Location Dropdown Selection containing exact 7 official locations */}
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Location City *
+                  <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                    <span>Location *</span>
+                    <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                      Lagos
+                    </span>
                   </label>
                   <select
-                    value={city}
-                    onChange={(e) => setCity(e.target.value as SupportedCity)}
-                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900 bg-white font-bold cursor-pointer"
+                    value={selectedLocation}
+                    onChange={(e) => setSelectedLocation(e.target.value as AdminLocationOption)}
+                    className="w-full px-3.5 py-2.5 border-2 border-emerald-600/40 focus:border-emerald-600 rounded-xl focus:outline-none text-slate-900 bg-white font-bold cursor-pointer text-xs sm:text-sm shadow-2xs"
                   >
-                    <option value="Lagos">Lagos</option>
+                    {ADMIN_LOCATION_OPTIONS.map((loc) => (
+                      <option key={loc} value={loc}>
+                        {loc}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -374,26 +386,20 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
 
               </div>
 
-              {/* Neighborhood & Address */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Neighborhood / District</label>
+              {/* Specific Street Address / Landmark (Optional) */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>Specific Street Address / Landmark (Optional)</span>
+                  <span className="text-[11px] text-slate-400 font-normal">e.g. Off Lekki-Epe Expressway, Phase 2</span>
+                </label>
+                <div className="relative">
+                  <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                   <input
                     type="text"
-                    value={neighborhood}
-                    onChange={(e) => setNeighborhood(e.target.value)}
-                    placeholder="e.g. Ikoyi / Maitama / Old GRA / Bodija"
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Specific Address / Landmark</label>
-                  <input
-                    type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="e.g. Off Alexander Avenue"
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900"
+                    value={specificAddress}
+                    onChange={(e) => setSpecificAddress(e.target.value)}
+                    placeholder={`e.g. Block 4, Road 2, ${selectedLocation}`}
+                    className="w-full pl-9 pr-3.5 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-900 text-xs sm:text-sm"
                   />
                 </div>
               </div>

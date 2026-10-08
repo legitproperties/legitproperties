@@ -1,5 +1,36 @@
 import { createClient } from '@supabase/supabase-js';
-import { Property, PropertyRequestLead, AdminUser, BlogPost, PropertyType, BookingRequest, BookingStatus } from '../types';
+import { Property, PropertyRequestLead, AdminUser, BlogPost, PropertyType, BookingRequest, BookingStatus, ADMIN_LOCATION_OPTIONS, AdminLocationOption } from '../types';
+
+export function resolveAdminLocation(propLike?: any): AdminLocationOption {
+  if (!propLike) return 'Ajah';
+
+  const raw = [
+    typeof propLike === 'string' ? propLike : '',
+    propLike?.location_name,
+    propLike?.locationName,
+    typeof propLike?.location === 'string' ? propLike.location : '',
+    propLike?.location?.neighborhood,
+    propLike?.location?.address,
+    propLike?.title,
+    propLike?.description
+  ].filter(Boolean).join(' ').trim();
+
+  const lower = raw.toLowerCase();
+
+  for (const opt of ADMIN_LOCATION_OPTIONS) {
+    if (lower === opt.toLowerCase()) return opt;
+  }
+
+  if (lower.includes('royal garden')) return 'Royal Garden Estate';
+  if (lower.includes('abraham adesanya')) return 'Abraham Adesanya Estate';
+  if (lower.includes('thomas estate') || lower.includes('thomas')) return 'Thomas Estate';
+  if (lower.includes('sangotedo')) return 'Sangotedo';
+  if (lower.includes('ikota')) return 'Ikota';
+  if (lower.includes('awoyaya')) return 'Awoyaya';
+  if (lower.includes('ajah')) return 'Ajah';
+
+  return 'Ajah';
+}
 
 const LIVE_SUPABASE_URL = 'https://tpzbgjvhrciszctpzjxd.supabase.co';
 const LIVE_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwemJnanZocmNpc3pjdHB6anhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1Mzk3MjIsImV4cCI6MjEwMjExNTcyMn0.OEEFJOZQEga87JVLKdA25UjCThfzNl48A51jdMpUU-A';
@@ -426,37 +457,30 @@ export async function fetchPropertiesFromSupabase(filters?: PropertyQueryFilters
         ? item.gallery_images
         : (Array.isArray(item.images) && item.images.length > 0 ? item.images : [mainImg]);
 
+      const resolvedLocationName = resolveAdminLocation({
+        location: item.location,
+        title: item.title,
+        description: item.description
+      });
+
       let parsedLocation: Property['location'];
       if (typeof item.location === 'object' && item.location !== null) {
         parsedLocation = {
-          address: item.location.address || 'Prime Axis',
-          neighborhood: item.location.neighborhood || item.location.address || 'Prime Area',
-          city: item.location.city || 'Lagos',
-          state: item.location.state || 'Lagos State'
+          address: item.location.address || resolvedLocationName,
+          neighborhood: resolvedLocationName,
+          city: 'Lagos',
+          state: 'Lagos State'
         };
       } else if (typeof item.location === 'string') {
-        if (item.location.startsWith('{')) {
-          try {
-            const obj = JSON.parse(item.location);
-            parsedLocation = {
-              address: obj.address || item.location,
-              neighborhood: obj.neighborhood || obj.city || 'Prime Area',
-              city: obj.city || 'Lagos',
-              state: obj.state || 'Lagos State'
-            };
-          } catch {
-            parsedLocation = { address: item.location, neighborhood: item.location, city: 'Lagos', state: 'Lagos State' };
-          }
-        } else {
-          parsedLocation = {
-            address: item.location,
-            neighborhood: item.location,
-            city: 'Lagos',
-            state: 'Lagos State'
-          };
-        }
+        const rawLoc = item.location.trim();
+        parsedLocation = {
+          address: rawLoc || resolvedLocationName,
+          neighborhood: resolvedLocationName,
+          city: 'Lagos',
+          state: 'Lagos State'
+        };
       } else {
-        parsedLocation = { address: 'Lagos, Nigeria', neighborhood: 'Lagos', city: 'Lagos', state: 'Lagos State' };
+        parsedLocation = { address: resolvedLocationName, neighborhood: resolvedLocationName, city: 'Lagos', state: 'Lagos State' };
       }
 
       const isShortStay = 
@@ -494,6 +518,7 @@ export async function fetchPropertiesFromSupabase(filters?: PropertyQueryFilters
         category: (listingType === 'short_stay' ? 'short_stay' : (item.category || 'luxury_apartment')) as any,
         purpose: listingType === 'short_stay' ? 'Vacation & Short Stay' : (item.purpose || 'Investment'),
         location: parsedLocation,
+        location_name: resolvedLocationName,
         priceNgn: item.price ?? item.price_ngn ?? item.priceNgn ?? 0,
         priceUsd: item.price_usd !== null && item.price_usd !== undefined ? Number(item.price_usd) : (item.priceUsd ? Number(item.priceUsd) : undefined),
         sizeSqm: item.size_sqm ?? item.sizeSqm ?? item.size,
@@ -641,9 +666,13 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
       .trim();
     const safeDescription = `${cleanDesc} [CURRENCY:${selectedCurrency}]`;
 
-    const locationString = typeof property.location === 'object' && property.location !== null
-      ? [property.location.address, property.location.neighborhood, property.location.city, property.location.state].filter(Boolean).join(', ') || 'Lagos, Nigeria'
-      : String(property.location || 'Lagos, Nigeria');
+    // Exact clean location string saved directly to the Supabase 'location' column (Awoyaya, Ajah, Royal Garden Estate, etc.):
+    const locationString = resolveAdminLocation(
+      (property as any).location_name ||
+      (property as any).locationName ||
+      property.location ||
+      property
+    );
 
     const mainImage = Array.isArray(property.images) && property.images.length > 0
       ? property.images[0]
@@ -688,24 +717,12 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
     };
 
     if (property.id && !property.id.startsWith('temp-')) {
-      // Update existing property
+      // Update existing property directly with exact schema columns
       let { data, error } = await supabase
         .from('properties')
-        .update(extendedPayload)
+        .update(basePayload)
         .eq('id', property.id)
         .select();
-
-      // If schema cache does not have listing_type or price_unit, retry with basePayload
-      if (error && error.code === 'PGRST204') {
-        console.warn('Retrying update with base payload without extended columns:', error.message);
-        const retry = await supabase
-          .from('properties')
-          .update(basePayload)
-          .eq('id', property.id)
-          .select();
-        data = retry.data;
-        error = retry.error;
-      }
 
       if (error) {
         console.error('Supabase Property Update Failed:', {
@@ -726,22 +743,11 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
       }
       return { success: true, data };
     } else {
-      // Insert new property
+      // Insert new property directly with exact schema columns
       let { data, error } = await supabase
         .from('properties')
-        .insert([extendedPayload])
+        .insert([basePayload])
         .select();
-
-      // If schema cache does not have listing_type or price_unit, retry with basePayload
-      if (error && error.code === 'PGRST204') {
-        console.warn('Retrying insert with base payload without extended columns:', error.message);
-        const retry = await supabase
-          .from('properties')
-          .insert([basePayload])
-          .select();
-        data = retry.data;
-        error = retry.error;
-      }
 
       if (error) {
         console.error('Supabase Property Insert Failed:', {

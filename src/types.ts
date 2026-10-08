@@ -5,6 +5,18 @@ export type PriceUnit = 'per_night' | 'total';
 
 export type SupportedCity = 'Lagos';
 
+export const ADMIN_LOCATION_OPTIONS = [
+  'Awoyaya',
+  'Ajah',
+  'Royal Garden Estate',
+  'Abraham Adesanya Estate',
+  'Ikota',
+  'Sangotedo',
+  'Thomas Estate'
+] as const;
+
+export type AdminLocationOption = typeof ADMIN_LOCATION_OPTIONS[number];
+
 export type TitleStatus = 
   | 'Certificate of Occupancy (C of O)'
   | 'Governor\'s Consent'
@@ -35,6 +47,7 @@ export interface Property {
     city: SupportedCity | string;
     state: string;
   };
+  location_name?: AdminLocationOption | string;
   priceNgn: number;
   priceUsd?: number;
   sizeSqm?: number;

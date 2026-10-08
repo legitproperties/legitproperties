@@ -154,8 +154,12 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
           <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-1 text-slate-500 text-xs font-semibold">
-                <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                <span>{property.location.address}, {property.location.neighborhood}, {property.location.city}</span>
+                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span>
+                  {property.location?.address && property.location.address !== property.location.neighborhood
+                    ? property.location.address
+                    : `${property.location?.neighborhood || (property as any).location_name || 'Ajah'}, Lagos`}
+                </span>
               </div>
               <div className="flex flex-wrap items-baseline gap-2.5 mt-1">
                 <span className="text-2xl sm:text-3xl font-black text-slate-900 font-mono tracking-tight">

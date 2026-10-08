@@ -111,7 +111,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           {/* Location Line */}
           <div className="flex items-center gap-1 text-slate-500 text-xs font-semibold">
             <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-            <span className="truncate">{property.location.neighborhood}, {property.location.city}</span>
+            <span className="truncate">{property.location?.neighborhood || (property as any).location_name || 'Ajah'}, Lagos</span>
           </div>
 
           {/* Title Heading */}
