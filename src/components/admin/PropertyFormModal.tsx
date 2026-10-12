@@ -12,7 +12,9 @@ import {
   MapPin,
   Calendar,
   Sparkles,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import { Property, SupportedCity, ListingType, PriceUnit, TitleStatus, ADMIN_LOCATION_OPTIONS, AdminLocationOption } from '../../types';
 import { resolveAdminLocation } from '../../lib/supabase';
@@ -22,13 +24,15 @@ interface PropertyFormModalProps {
   onClose: () => void;
   onSave: (property: Partial<Property>) => Promise<{ success: boolean; error?: string } | boolean>;
   propertyToEdit?: Property | null;
+  onDelete?: (id: string) => Promise<{ success: boolean; error?: string } | boolean>;
 }
 
 export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   isOpen,
   onClose,
   onSave,
-  propertyToEdit
+  propertyToEdit,
+  onDelete
 }) => {
   if (!isOpen) return null;
 
@@ -139,6 +143,36 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copiedError, setCopiedError] = useState(false);
+
+  // Deletion state when editing existing property
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDelete = async () => {
+    if (!propertyToEdit?.id || !onDelete) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const res = await onDelete(propertyToEdit.id);
+      setIsDeleting(false);
+      if (typeof res === 'boolean') {
+        if (res) {
+          onClose();
+        } else {
+          setDeleteError('Failed to delete property from database.');
+        }
+      } else if (res?.success) {
+        onClose();
+      } else {
+        setDeleteError(res?.error || 'Failed to delete property from database.');
+      }
+    } catch (err: any) {
+      setIsDeleting(false);
+      setDeleteError(err?.message || 'An unexpected error occurred during deletion.');
+    }
+  };
 
   // Automatic synchronization: when listingType switches, align default priceUnit & titleStatus
   const handleListingTypeChange = (type: ListingType) => {
@@ -822,22 +856,79 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
             />
           </div>
 
-          {/* Footer Save Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
-            >
-              {isSaving ? 'Saving to Database...' : propertyToEdit ? 'Update Property' : 'Publish Property'}
-            </button>
+          {/* Delete Error Notice if any */}
+          {deleteError && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{deleteError}</span>
+            </div>
+          )}
+
+          {/* Footer Actions: Delete (if editing) & Save Buttons */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-slate-200">
+            {propertyToEdit && onDelete ? (
+              <div>
+                {!isConfirmingDelete ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsConfirmingDelete(true);
+                      setDeleteError(null);
+                    }}
+                    className="px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 border border-red-200 font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs shadow-2xs"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                    <span>Delete Property</span>
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1.5 bg-red-50 p-1.5 rounded-xl border border-red-200 animate-fadeIn">
+                    <span className="text-[11px] font-bold text-red-800 px-1.5">Permanently delete?</span>
+                    <button
+                      type="button"
+                      disabled={isDeleting}
+                      onClick={handleDelete}
+                      className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-xs cursor-pointer disabled:opacity-50 flex items-center gap-1 shadow-xs"
+                    >
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <span>Deleting...</span>
+                        </>
+                      ) : (
+                        'Yes, Delete'
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isDeleting}
+                      onClick={() => setIsConfirmingDelete(false)}
+                      className="px-2 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-semibold rounded-lg text-xs border border-slate-200 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div />
+            )}
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl transition-colors cursor-pointer text-xs sm:text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving || isDeleting}
+                className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50 text-xs sm:text-sm"
+              >
+                {isSaving ? 'Saving to Database...' : propertyToEdit ? 'Update Property' : 'Publish Property'}
+              </button>
+            </div>
           </div>
 
         </form>

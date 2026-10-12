@@ -57,11 +57,9 @@ export const BookingsTracker: React.FC = () => {
   };
 
   const handleDeleteBooking = async (id: string) => {
-    if (window.confirm('Delete this reservation record from tracker?')) {
-      setBookings((prev) => prev.filter((b) => b.id !== id));
-      if (selectedBooking?.id === id) setSelectedBooking(null);
-      await deleteBookingFromSupabase(id);
-    }
+    setBookings((prev) => prev.filter((b) => b.id !== id));
+    if (selectedBooking?.id === id) setSelectedBooking(null);
+    await deleteBookingFromSupabase(id);
   };
 
   const filteredBookings = useMemo(() => {

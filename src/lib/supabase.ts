@@ -803,15 +803,55 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
 }
 
 /**
- * Delete property from Supabase
+ * Delete property from Supabase properties table.
+ * Returns detailed success or error status to guarantee transparency in admin UI.
  */
-export async function deletePropertyFromSupabase(id: string): Promise<boolean> {
-  if (!supabase) return false;
+export async function deletePropertyFromSupabase(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) {
+    return { success: false, error: 'Supabase database client is not initialized.' };
+  }
+  if (!id) {
+    return { success: false, error: 'Invalid or missing Property ID.' };
+  }
+
   try {
-    const { error } = await supabase.from('properties').delete().eq('id', id);
-    return !error;
-  } catch {
-    return false;
+    const { user } = await getActiveAuthSession();
+
+    // Execute deletion and retrieve deleted row ID to confirm removal
+    const { data, error } = await supabase
+      .from('properties')
+      .delete()
+      .eq('id', id)
+      .select('id');
+
+    if (error) {
+      console.error('Supabase property deletion error:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        propertyId: id
+      });
+
+      let friendlyMsg = error.message;
+      if (error.code === '42501') {
+        friendlyMsg = `Permission denied by Row-Level Security (RLS). Please check that your Supabase database user (${user?.email || 'authenticated admin'}) has DELETE privileges on the 'properties' table.`;
+      } else if (error.code === '23503') {
+        friendlyMsg = 'Cannot delete this property because active bookings or inquiries reference it.';
+      }
+
+      return { success: false, error: friendlyMsg };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('Unexpected error during property deletion:', err);
+    return { 
+      success: false, 
+      error: err?.message || 'An unexpected error occurred while deleting the property.' 
+    };
   }
 }
 
@@ -913,13 +953,24 @@ export async function saveBlogPostToSupabase(post: Partial<BlogPost>): Promise<{
   }
 }
 
-export async function deleteBlogPostFromSupabase(id: string): Promise<boolean> {
-  if (!supabase) return false;
+export async function deleteBlogPostFromSupabase(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) {
+    return { success: false, error: 'Database client not connected.' };
+  }
+  if (!id) {
+    return { success: false, error: 'Post ID is required.' };
+  }
+
   try {
     const { error } = await supabase.from('blog_posts').delete().eq('id', id);
-    return !error;
-  } catch {
-    return false;
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to delete blog post.' };
   }
 }
 

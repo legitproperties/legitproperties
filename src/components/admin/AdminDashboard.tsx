@@ -28,7 +28,8 @@ import {
   Mail,
   MapPin,
   Sparkles,
-  Calendar
+  Calendar,
+  Loader2
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { Property, BlogPost, PropertyRequestLead, BookingRequest, ADMIN_LOCATION_OPTIONS } from '../../types';
@@ -139,13 +140,63 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoToPublicSite
     return { success: false, error: res.error };
   };
 
+  // Property Deletion Confirmation State
+  const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
+  const [isDeletingProperty, setIsDeletingProperty] = useState(false);
+  const [deletePropertyError, setDeletePropertyError] = useState<string | null>(null);
+
+  // Blog Deletion Confirmation State
+  const [blogToDelete, setBlogToDelete] = useState<BlogPost | null>(null);
+  const [isDeletingBlog, setIsDeletingBlog] = useState(false);
+  const [deleteBlogError, setDeleteBlogError] = useState<string | null>(null);
+
+  // Toast notification for all operations
+  const [toastNotification, setToastNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  useEffect(() => {
+    if (toastNotification) {
+      const timer = setTimeout(() => setToastNotification(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastNotification]);
+
   const handleDeleteProperty = async (id: string) => {
-    if (window.confirm('Are you sure you want to permanently delete this property listing?')) {
-      const success = await deletePropertyFromSupabase(id);
-      if (success) {
+    setIsDeletingProperty(true);
+    setDeletePropertyError(null);
+
+    const targetProp = propertiesList.find(p => p.id === id) || propertyToDelete;
+
+    try {
+      const res = await deletePropertyFromSupabase(id);
+      if (res.success) {
         setPropertiesList(prev => prev.filter(p => p.id !== id));
         setStats(prev => ({ ...prev, totalProperties: Math.max(0, prev.totalProperties - 1) }));
+        setPropertyToDelete(null);
+        setIsDeletingProperty(false);
+        setToastNotification({
+          message: `Property "${targetProp?.title || 'Listing'}" permanently removed from Supabase.`,
+          type: 'success'
+        });
+        return { success: true };
+      } else {
+        const errMsg = res.error || 'Failed to delete property from database.';
+        setDeletePropertyError(errMsg);
+        setIsDeletingProperty(false);
+        setToastNotification({
+          message: errMsg,
+          type: 'error'
+        });
+        return { success: false, error: errMsg };
       }
+    } catch (err: any) {
+      const errMsg = err?.message || 'An unexpected error occurred during property deletion.';
+      setDeletePropertyError(errMsg);
+      setIsDeletingProperty(false);
+      setToastNotification({
+        message: errMsg,
+        type: 'error'
+      });
+      return { success: false, error: errMsg };
     }
   };
 
@@ -160,12 +211,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoToPublicSite
   };
 
   const handleDeleteBlog = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this blog post?')) {
-      const success = await deleteBlogPostFromSupabase(id);
-      if (success) {
+    setIsDeletingBlog(true);
+    setDeleteBlogError(null);
+
+    const targetBlog = blogList.find(b => b.id === id) || blogToDelete;
+
+    try {
+      const res = await deleteBlogPostFromSupabase(id);
+      if (res.success) {
         setBlogList(prev => prev.filter(b => b.id !== id));
         setStats(prev => ({ ...prev, totalBlogPosts: Math.max(0, prev.totalBlogPosts - 1) }));
+        setBlogToDelete(null);
+        setIsDeletingBlog(false);
+        setToastNotification({
+          message: `Article "${targetBlog?.title || 'Post'}" deleted successfully.`,
+          type: 'success'
+        });
+        return { success: true };
+      } else {
+        const errMsg = res.error || 'Failed to delete blog post from database.';
+        setDeleteBlogError(errMsg);
+        setIsDeletingBlog(false);
+        setToastNotification({
+          message: errMsg,
+          type: 'error'
+        });
+        return { success: false, error: errMsg };
       }
+    } catch (err: any) {
+      const errMsg = err?.message || 'An unexpected error occurred during article deletion.';
+      setDeleteBlogError(errMsg);
+      setIsDeletingBlog(false);
+      setToastNotification({
+        message: errMsg,
+        type: 'error'
+      });
+      return { success: false, error: errMsg };
     }
   };
 
@@ -717,9 +798,12 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
                                   <Edit3 className="w-3.5 h-3.5" />
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteProperty(prop.id)}
-                                  className="p-1.5 rounded-lg bg-red-950 hover:bg-red-900 text-red-400 hover:text-red-200"
-                                  title="Delete"
+                                  onClick={() => {
+                                    setPropertyToDelete(prop);
+                                    setDeletePropertyError(null);
+                                  }}
+                                  className="p-1.5 rounded-lg bg-red-950 hover:bg-red-900 text-red-400 hover:text-red-200 transition-colors cursor-pointer"
+                                  title="Delete Property"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -861,9 +945,12 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
                               Edit
                             </button>
                             <button
-                              onClick={() => handleDeleteProperty(prop.id)}
-                              className="p-1.5 rounded-lg bg-red-950 text-red-400 hover:bg-red-900 cursor-pointer"
-                              title="Delete"
+                              onClick={() => {
+                                setPropertyToDelete(prop);
+                                setDeletePropertyError(null);
+                              }}
+                              className="p-1.5 rounded-lg bg-red-950 text-red-400 hover:bg-red-900 transition-colors cursor-pointer"
+                              title="Delete Property"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -965,8 +1052,12 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
                           Edit in WP
                         </button>
                         <button
-                          onClick={() => handleDeleteBlog(post.id)}
-                          className="p-1.5 rounded-xl bg-red-950 text-red-400 hover:bg-red-900 cursor-pointer"
+                          onClick={() => {
+                            setBlogToDelete(post);
+                            setDeleteBlogError(null);
+                          }}
+                          className="p-1.5 rounded-xl bg-red-950 text-red-400 hover:bg-red-900 transition-colors cursor-pointer"
+                          title="Delete Article"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1111,8 +1202,209 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
           setPropertyToEdit(null);
         }}
         onSave={handleSaveProperty}
+        onDelete={handleDeleteProperty}
         propertyToEdit={propertyToEdit}
       />
+
+      {/* Property Delete Confirmation Modal */}
+      {propertyToDelete && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="relative bg-slate-900 border border-slate-700/80 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden p-6 text-white space-y-5 animate-scaleIn">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-red-950/70 border border-red-800/80 text-red-400 flex items-center justify-center shrink-0">
+                  <Trash2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-white">Permanently Delete Property?</h3>
+                  <p className="text-xs text-slate-400">This action cannot be undone</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  if (!isDeletingProperty) {
+                    setPropertyToDelete(null);
+                    setDeletePropertyError(null);
+                  }
+                }}
+                disabled={isDeletingProperty}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Target Property Preview Card */}
+            <div className="bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800 flex items-center gap-3">
+              {propertyToDelete.property_image ? (
+                <img
+                  src={propertyToDelete.property_image}
+                  alt={propertyToDelete.title}
+                  className="w-14 h-14 rounded-xl object-cover border border-slate-800 shrink-0"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-xl bg-slate-800 flex items-center justify-center text-slate-500 shrink-0">
+                  <Building2 className="w-6 h-6" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <h4 className="font-bold text-xs text-white truncate">{propertyToDelete.title}</h4>
+                <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                  📍 {propertyToDelete.location?.neighborhood || propertyToDelete.location_name || 'Lagos'}
+                </p>
+                <p className="text-[10px] text-emerald-400 font-mono mt-0.5">
+                  ₦{propertyToDelete.priceNgn?.toLocaleString() || '0'}
+                  {propertyToDelete.priceUsd ? ` · $${propertyToDelete.priceUsd?.toLocaleString()}` : ''}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              This property will be immediately removed from the <code className="text-emerald-400 font-mono text-[11px]">properties</code> Supabase database table and will no longer appear on your website.
+            </p>
+
+            {deletePropertyError && (
+              <div className="p-3 bg-red-950/80 border border-red-700/80 text-red-200 rounded-xl text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <span className="leading-snug">{deletePropertyError}</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingProperty}
+                onClick={() => {
+                  setPropertyToDelete(null);
+                  setDeletePropertyError(null);
+                }}
+                className="px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingProperty}
+                onClick={() => handleDeleteProperty(propertyToDelete.id)}
+                className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isDeletingProperty ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Deleting from Database...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete Permanently</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Blog Delete Confirmation Modal */}
+      {blogToDelete && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="relative bg-slate-900 border border-slate-700/80 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden p-6 text-white space-y-5 animate-scaleIn">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-red-950/70 border border-red-800/80 text-red-400 flex items-center justify-center shrink-0">
+                  <Trash2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-white">Delete Blog Post?</h3>
+                  <p className="text-xs text-slate-400">Permanently removes this article</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  if (!isDeletingBlog) {
+                    setBlogToDelete(null);
+                    setDeleteBlogError(null);
+                  }
+                }}
+                disabled={isDeletingBlog}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800">
+              <h4 className="font-bold text-xs text-white truncate">{blogToDelete.title}</h4>
+              <p className="text-[11px] text-slate-400 mt-1">Category: {blogToDelete.category}</p>
+            </div>
+
+            {deleteBlogError && (
+              <div className="p-3 bg-red-950/80 border border-red-700/80 text-red-200 rounded-xl text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <span className="leading-snug">{deleteBlogError}</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingBlog}
+                onClick={() => {
+                  setBlogToDelete(null);
+                  setDeleteBlogError(null);
+                }}
+                className="px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingBlog}
+                onClick={() => handleDeleteBlog(blogToDelete.id)}
+                className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isDeletingBlog ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete Article</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification Banner */}
+      {toastNotification && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm">
+          <div
+            className={`p-3.5 rounded-2xl shadow-2xl border flex items-center gap-3 ${
+              toastNotification.type === 'success'
+                ? 'bg-slate-900 border-emerald-500/50 text-white'
+                : 'bg-red-950 border-red-600/50 text-white'
+            }`}
+          >
+            {toastNotification.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+            )}
+            <p className="text-xs font-medium leading-relaxed">{toastNotification.message}</p>
+            <button
+              onClick={() => setToastNotification(null)}
+              className="p-1 text-slate-400 hover:text-white transition-colors cursor-pointer shrink-0 ml-auto"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Blog Modal */}
       <BlogPostFormModal
