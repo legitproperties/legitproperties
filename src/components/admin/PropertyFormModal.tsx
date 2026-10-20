@@ -14,10 +14,20 @@ import {
   Sparkles,
   ArrowLeftRight,
   Trash2,
-  Loader2
+  Loader2,
+  ExternalLink,
+  RefreshCw,
+  CheckCircle2
 } from 'lucide-react';
 import { Property, SupportedCity, ListingType, PriceUnit, TitleStatus, ADMIN_LOCATION_OPTIONS, AdminLocationOption } from '../../types';
 import { resolveAdminLocation } from '../../lib/supabase';
+import {
+  normalizeImageUrl,
+  getLinkConversionNotice,
+  handleImageError,
+  DEFAULT_PROPERTY_IMAGE,
+  PRESET_LUXURY_GALLERIES
+} from '../../lib/imageUtils';
 
 interface PropertyFormModalProps {
   isOpen: boolean;
@@ -127,6 +137,62 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   const [galleryImg3, setGalleryImg3] = useState(existingImages[3] || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80');
   const [galleryImg4, setGalleryImg4] = useState(existingImages[4] || 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80');
 
+  // Image Enhancements, Auto-conversions & Quick Multi-paste Tools
+  const [conversionNotices, setConversionNotices] = useState<Record<string, string>>({});
+  const [imageErrorStates, setImageErrorStates] = useState<Record<string, boolean>>({});
+  const [isMultiPasteOpen, setIsMultiPasteOpen] = useState(false);
+  const [multiPasteText, setMultiPasteText] = useState('');
+  const [isPresetOpen, setIsPresetOpen] = useState(false);
+
+  const handleUpdateImageSlot = (
+    slotKey: string,
+    rawVal: string,
+    setter: (val: string) => void
+  ) => {
+    const notice = getLinkConversionNotice(rawVal);
+    const normalized = normalizeImageUrl(rawVal);
+    setter(normalized);
+
+    // Reset error state on change so new link can be tested
+    setImageErrorStates((prev) => ({ ...prev, [slotKey]: false }));
+
+    if (notice) {
+      setConversionNotices((prev) => ({ ...prev, [slotKey]: notice }));
+    } else {
+      setConversionNotices((prev) => {
+        const next = { ...prev };
+        delete next[slotKey];
+        return next;
+      });
+    }
+  };
+
+  const handleApplyMultiPaste = () => {
+    if (!multiPasteText.trim()) return;
+    const links = multiPasteText
+      .split(/[\n,;]+/)
+      .map((s) => normalizeImageUrl(s.trim()))
+      .filter((s) => Boolean(s) && s.length > 5);
+
+    if (links[0]) handleUpdateImageSlot('main', links[0], setMainImageUrl);
+    if (links[1]) handleUpdateImageSlot('gal1', links[1], setGalleryImg1);
+    if (links[2]) handleUpdateImageSlot('gal2', links[2], setGalleryImg2);
+    if (links[3]) handleUpdateImageSlot('gal3', links[3], setGalleryImg3);
+    if (links[4]) handleUpdateImageSlot('gal4', links[4], setGalleryImg4);
+
+    setIsMultiPasteOpen(false);
+    setMultiPasteText('');
+  };
+
+  const handleApplyPreset = (preset: (typeof PRESET_LUXURY_GALLERIES)[0]) => {
+    if (preset.images[0]) handleUpdateImageSlot('main', preset.images[0], setMainImageUrl);
+    if (preset.images[1]) handleUpdateImageSlot('gal1', preset.images[1], setGalleryImg1);
+    if (preset.images[2]) handleUpdateImageSlot('gal2', preset.images[2], setGalleryImg2);
+    if (preset.images[3]) handleUpdateImageSlot('gal3', preset.images[3], setGalleryImg3);
+    if (preset.images[4]) handleUpdateImageSlot('gal4', preset.images[4], setGalleryImg4);
+    setIsPresetOpen(false);
+  };
+
   // 7. Video & Availability
   const [propertyVideo, setPropertyVideo] = useState(
     propertyToEdit?.property_video || propertyToEdit?.virtualTourUrl || ''
@@ -212,14 +278,19 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
     setIsSaving(true);
     setErrorMsg(null);
 
-    // Build gallery images array
-    const galleryArray = [
-      mainImageUrl.trim(),
-      galleryImg1.trim(),
-      galleryImg2.trim(),
-      galleryImg3.trim(),
-      galleryImg4.trim()
-    ].filter(Boolean);
+    // Build and normalize gallery images array
+    const rawGalleryArray = [
+      mainImageUrl,
+      galleryImg1,
+      galleryImg2,
+      galleryImg3,
+      galleryImg4
+    ];
+    const galleryArray = rawGalleryArray
+      .map(normalizeImageUrl)
+      .filter((s) => Boolean(s) && s.length > 5);
+    const normalizedMain = normalizeImageUrl(mainImageUrl) || galleryArray[0] || DEFAULT_PROPERTY_IMAGE;
+    const finalGallery = galleryArray.length > 0 ? galleryArray : [normalizedMain];
 
     const stateMap: Record<SupportedCity, string> = {
       Lagos: 'Lagos State'
@@ -253,9 +324,9 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       bathrooms: Number(bathrooms) || undefined,
       whatsappNumber: whatsappNumber.trim(),
       callNumber: callNumber.trim(),
-      property_image: mainImageUrl.trim(),
-      gallery_images: galleryArray,
-      images: galleryArray,
+      property_image: normalizedMain,
+      gallery_images: finalGallery,
+      images: finalGallery,
       property_video: propertyVideo.trim() || undefined,
       virtualTourUrl: propertyVideo.trim() || undefined,
       property_availability: propertyAvailability,
@@ -287,6 +358,115 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       if (res.success) onClose();
       else setErrorMsg(res.error || 'Failed to save property to database.');
     }
+  };
+
+  const renderImageSlot = (
+    slotKey: string,
+    label: string,
+    value: string,
+    setter: (val: string) => void,
+    required = false,
+    placeholder = 'https://images.unsplash.com/... or Google Drive / Dropbox link'
+  ) => {
+    const notice = conversionNotices[slotKey];
+    const hasError = imageErrorStates[slotKey];
+    const hasValue = Boolean(value && value.trim());
+
+    return (
+      <div className="bg-slate-50/90 border border-slate-200 rounded-2xl p-3.5 space-y-2.5 transition-all">
+        <div className="flex items-center justify-between gap-2">
+          <label className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+            <ImageIcon className="w-3.5 h-3.5 text-emerald-700" />
+            <span>{label}</span>
+            {required && <span className="text-red-500 font-bold">*</span>}
+          </label>
+          {hasValue && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleUpdateImageSlot(slotKey, '', setter)}
+                className="text-[11px] text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
+              >
+                Clear
+              </button>
+              <a
+                href={value}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-emerald-700 hover:text-emerald-800 flex items-center gap-0.5 font-medium"
+              >
+                <span>Open Link</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          )}
+        </div>
+
+        <input
+          type="url"
+          required={required}
+          value={value}
+          onChange={(e) => handleUpdateImageSlot(slotKey, e.target.value, setter)}
+          onPaste={(e) => {
+            const pastedText = e.clipboardData.getData('text');
+            if (pastedText) {
+              e.preventDefault();
+              handleUpdateImageSlot(slotKey, pastedText, setter);
+            }
+          }}
+          placeholder={placeholder}
+          className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 bg-white text-slate-900 text-xs font-mono"
+        />
+
+        {/* Auto-conversion Notice */}
+        {notice && (
+          <div className="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5 animate-fadeIn">
+            <Sparkles className="w-3 h-3 text-emerald-600 shrink-0" />
+            <span className="font-semibold">{notice}</span>
+          </div>
+        )}
+
+        {/* Live Preview Container */}
+        {hasValue && (
+          <div className="flex items-center gap-3 pt-1 border-t border-slate-200">
+            <div className="relative w-16 h-12 rounded-lg overflow-hidden bg-slate-900 border border-slate-300 shrink-0 shadow-xs">
+              <img
+                src={value}
+                alt="Preview"
+                referrerPolicy="no-referrer"
+                onLoad={() => {
+                  setImageErrorStates((prev) => ({ ...prev, [slotKey]: false }));
+                }}
+                onError={(e) => {
+                  setImageErrorStates((prev) => ({ ...prev, [slotKey]: true }));
+                  handleImageError(e, 0);
+                }}
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              {hasError ? (
+                <div className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 p-2 rounded-xl flex items-start gap-1.5 leading-snug">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block text-amber-950">Image failed to render</span>
+                    <span className="text-[10px] text-amber-800 block mt-0.5">
+                      Ensure the URL is public (e.g. for Google Drive: "Anyone with the link can view").
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 text-[11px] text-emerald-700 font-bold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Preview verified & rendering cleanly</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (

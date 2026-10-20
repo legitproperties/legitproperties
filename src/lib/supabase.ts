@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { Property, PropertyRequestLead, AdminUser, BlogPost, PropertyType, BookingRequest, BookingStatus, ADMIN_LOCATION_OPTIONS, AdminLocationOption } from '../types';
+import { normalizeImageUrl, DEFAULT_PROPERTY_IMAGE } from './imageUtils';
 
 export function resolveAdminLocation(propLike?: any): AdminLocationOption {
   if (!propLike) return 'Ajah';
@@ -472,10 +473,18 @@ export async function fetchPropertiesFromSupabase(filters?: PropertyQueryFilters
     }
 
     return data.map((item) => {
-      const mainImg = item.property_image || (Array.isArray(item.gallery_images) && item.gallery_images[0]) || (Array.isArray(item.images) && item.images[0]) || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80';
-      const gallery = Array.isArray(item.gallery_images) && item.gallery_images.length > 0
+      const rawMain = item.property_image || (Array.isArray(item.gallery_images) && item.gallery_images[0]) || (Array.isArray(item.images) && item.images[0]) || DEFAULT_PROPERTY_IMAGE;
+      const mainImg = normalizeImageUrl(rawMain) || DEFAULT_PROPERTY_IMAGE;
+
+      const rawGallery = Array.isArray(item.gallery_images) && item.gallery_images.length > 0
         ? item.gallery_images
         : (Array.isArray(item.images) && item.images.length > 0 ? item.images : [mainImg]);
+
+      const cleanedGallery = rawGallery
+        .map((img: string) => normalizeImageUrl(img))
+        .filter((img: string) => Boolean(img) && img.length > 5);
+
+      const gallery = cleanedGallery.length > 0 ? cleanedGallery : [mainImg];
 
       const resolvedLocationName = resolveAdminLocation({
         location: item.location,
@@ -694,13 +703,20 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
       property
     );
 
-    const mainImage = Array.isArray(property.images) && property.images.length > 0
+    const rawMain = Array.isArray(property.images) && property.images.length > 0
       ? property.images[0]
-      : (property.property_image || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80');
+      : (property.property_image || DEFAULT_PROPERTY_IMAGE);
+    const mainImage = normalizeImageUrl(rawMain) || DEFAULT_PROPERTY_IMAGE;
 
-    const galleryImages = Array.isArray(property.gallery_images) && property.gallery_images.length > 0
+    const rawGallery = Array.isArray(property.gallery_images) && property.gallery_images.length > 0
       ? property.gallery_images
       : (Array.isArray(property.images) && property.images.length > 0 ? property.images : [mainImage]);
+
+    const cleanedGallery = rawGallery
+      .map((img) => normalizeImageUrl(img))
+      .filter((img) => Boolean(img) && img.length > 5);
+
+    const galleryImages = cleanedGallery.length > 0 ? cleanedGallery : [mainImage];
 
     const listingType = property.listing_type || (property.property_type === 'short_stay' ? 'short_stay' : 'for_sale');
     const priceUnit = property.price_unit || (listingType === 'short_stay' ? 'per_night' : 'total');
@@ -724,6 +740,7 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
       call_number: callNum,
       property_image: mainImage,
       gallery_images: galleryImages,
+      images: galleryImages,
       property_video: propertyVideo,
       property_availability: propertyAvailability
     };

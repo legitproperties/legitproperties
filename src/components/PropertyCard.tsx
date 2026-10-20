@@ -2,6 +2,7 @@ import React from 'react';
 import { Property, CurrencyCode } from '../types';
 import { ShieldCheck, MapPin, Bookmark, Bed, Bath, Maximize2, MessageCircle, Phone, ArrowUpRight, Flame, Calendar } from 'lucide-react';
 import { formatPropertyPrice } from '../utils/formatters';
+import { normalizeImageUrl, handleImageError, DEFAULT_PROPERTY_IMAGE } from '../lib/imageUtils';
 
 interface PropertyCardProps {
   property: Property;
@@ -27,6 +28,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
   const priceUnitLabel = isShortStay ? ' / night' : '';
   const priceInfo = formatPropertyPrice(property, priceUnitLabel);
+  const thumbnailSrc = normalizeImageUrl(property.images?.[0] || property.property_image) || DEFAULT_PROPERTY_IMAGE;
+  const imageCount = property.images?.length || (property.gallery_images?.length || 1);
   const cleanWhatsapp = (property.whatsappNumber || '+2348030000000').replace(/[^0-9]/g, '');
   const cleanCall = property.callNumber || property.whatsappNumber || '+2348030000000';
   const whatsappUrl = `https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent(
@@ -39,9 +42,10 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       {/* Image Thumbnail Container */}
       <div className="relative aspect-[4/3] bg-slate-100 overflow-hidden cursor-pointer" onClick={() => onSelectProperty(property)}>
         <img
-          src={property.images[0] || property.property_image}
+          src={thumbnailSrc}
           alt={property.title}
           referrerPolicy="no-referrer"
+          onError={(e) => handleImageError(e, 0)}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
         />
         
@@ -96,9 +100,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               Video
             </div>
           )}
-          {property.images.length > 1 && (
+          {imageCount > 1 && (
             <div className="text-white text-[10px] font-bold bg-black/60 border border-white/10 px-2 py-0.5 rounded-md backdrop-blur-xs">
-              1/{property.images.length}
+              1/{imageCount}
             </div>
           )}
         </div>

@@ -15,8 +15,12 @@ import {
   Check,
   Award,
   Play,
-  Video
+  Video,
+  ChevronLeft,
+  ChevronRight,
+  Image as ImageIcon
 } from 'lucide-react';
+import { getValidPropertyImages, handleImageError } from '../lib/imageUtils';
 
 interface PropertyDetailModalProps {
   property: Property | null;
@@ -37,6 +41,19 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  const galleryImages = getValidPropertyImages(property);
+  const safeActiveIndex = activeImageIndex >= 0 && activeImageIndex < galleryImages.length ? activeImageIndex : 0;
+
+  const handlePrevImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : galleryImages.length - 1));
+  };
+
+  const handleNextImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveImageIndex((prev) => (prev < galleryImages.length - 1 ? prev + 1 : 0));
+  };
 
   const isShortStay =
     property.listing_type === 'short_stay' ||
@@ -119,31 +136,74 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
           
           {/* Gallery Showcase */}
           <div className="space-y-3">
-            <div className="relative aspect-[16/9] sm:aspect-[21/9] rounded-2xl overflow-hidden bg-slate-900 border border-slate-200">
+            <div className="relative aspect-[16/9] sm:aspect-[21/9] rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 group">
               <img
-                src={property.images[activeImageIndex] || property.images[0]}
-                alt={property.title}
+                src={galleryImages[safeActiveIndex]}
+                alt={`${property.title} - Photo ${safeActiveIndex + 1}`}
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover"
+                onError={(e) => handleImageError(e, safeActiveIndex)}
+                className="w-full h-full object-cover transition-opacity duration-300"
               />
-              <div className="absolute top-3 left-3 bg-slate-900/90 text-white text-xs font-bold px-3 py-1 rounded-full border border-white/20 flex items-center gap-1.5 backdrop-blur-md">
+
+              {/* Title Status Badge */}
+              <div className="absolute top-3 left-3 bg-slate-900/90 text-white text-xs font-bold px-3 py-1 rounded-full border border-white/20 flex items-center gap-1.5 backdrop-blur-md shadow-md">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                 <span>100% {property.titleStatus}</span>
               </div>
+
+              {/* Photo Counter Badge */}
+              <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1 rounded-full border border-white/20 flex items-center gap-1.5 shadow-md">
+                <ImageIcon className="w-3 h-3 text-slate-300" />
+                <span>{safeActiveIndex + 1} / {galleryImages.length}</span>
+              </div>
+
+              {/* Gallery Navigation Buttons (Previous / Next) */}
+              {galleryImages.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePrevImage}
+                    aria-label="Previous photo"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white flex items-center justify-center border border-white/20 shadow-lg backdrop-blur-xs transition-transform active:scale-95 cursor-pointer opacity-90 hover:opacity-100"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNextImage}
+                    aria-label="Next photo"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white flex items-center justify-center border border-white/20 shadow-lg backdrop-blur-xs transition-transform active:scale-95 cursor-pointer opacity-90 hover:opacity-100"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </>
+              )}
             </div>
 
-            {/* Thumbnails */}
-            {property.images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {property.images.map((img, idx) => (
+            {/* Thumbnails Strip */}
+            {galleryImages.length > 1 && (
+              <div className="flex gap-2.5 overflow-x-auto pb-1.5 pt-0.5 scrollbar-thin">
+                {galleryImages.map((img, idx) => (
                   <button
                     key={idx}
+                    type="button"
                     onClick={() => setActiveImageIndex(idx)}
                     className={`relative w-20 h-14 rounded-xl overflow-hidden border-2 flex-shrink-0 cursor-pointer transition-all ${
-                      activeImageIndex === idx ? 'border-slate-900 scale-105' : 'border-transparent opacity-70 hover:opacity-100'
+                      safeActiveIndex === idx
+                        ? 'border-slate-900 ring-2 ring-emerald-500/40 scale-105 shadow-md'
+                        : 'border-slate-200 opacity-60 hover:opacity-100 hover:border-slate-400'
                     }`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={img}
+                      alt={`Thumbnail ${idx + 1}`}
+                      referrerPolicy="no-referrer"
+                      onError={(e) => handleImageError(e, idx)}
+                      className="w-full h-full object-cover"
+                    />
+                    {safeActiveIndex === idx && (
+                      <div className="absolute inset-0 bg-slate-900/10 pointer-events-none" />
+                    )}
                   </button>
                 ))}
               </div>
