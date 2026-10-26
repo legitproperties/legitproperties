@@ -472,117 +472,177 @@ export async function fetchPropertiesFromSupabase(filters?: PropertyQueryFilters
       return [];
     }
 
-    return data.map((item) => {
-      const rawMain = item.property_image || (Array.isArray(item.gallery_images) && item.gallery_images[0]) || (Array.isArray(item.images) && item.images[0]) || DEFAULT_PROPERTY_IMAGE;
-      const mainImg = normalizeImageUrl(rawMain) || DEFAULT_PROPERTY_IMAGE;
-
-      const rawGallery = Array.isArray(item.gallery_images) && item.gallery_images.length > 0
-        ? item.gallery_images
-        : (Array.isArray(item.images) && item.images.length > 0 ? item.images : [mainImg]);
-
-      const cleanedGallery = rawGallery
-        .map((img: string) => normalizeImageUrl(img))
-        .filter((img: string) => Boolean(img) && img.length > 5);
-
-      const gallery = cleanedGallery.length > 0 ? cleanedGallery : [mainImg];
-
-      const resolvedLocationName = resolveAdminLocation({
-        location: item.location,
-        title: item.title,
-        description: item.description
-      });
-
-      let parsedLocation: Property['location'];
-      if (typeof item.location === 'object' && item.location !== null) {
-        parsedLocation = {
-          address: item.location.address || resolvedLocationName,
-          neighborhood: resolvedLocationName,
-          city: 'Lagos',
-          state: 'Lagos State'
-        };
-      } else if (typeof item.location === 'string') {
-        const rawLoc = item.location.trim();
-        parsedLocation = {
-          address: rawLoc || resolvedLocationName,
-          neighborhood: resolvedLocationName,
-          city: 'Lagos',
-          state: 'Lagos State'
-        };
-      } else {
-        parsedLocation = { address: resolvedLocationName, neighborhood: resolvedLocationName, city: 'Lagos', state: 'Lagos State' };
-      }
-
-      const isShortStay = 
-        item.listing_type === 'short_stay' || 
-        item.property_type === 'short_stay' || 
-        (typeof item.description === 'string' && (item.description.toLowerCase().includes('short stay') || item.description.toLowerCase().includes('shortlet') || item.description.toLowerCase().includes('airbnb'))) ||
-        (typeof item.title === 'string' && (item.title.toLowerCase().includes('short stay') || item.title.toLowerCase().includes('shortlet')));
-
-      const listingType = (isShortStay ? 'short_stay' : (item.listing_type || 'for_sale')) as 'short_stay' | 'for_sale';
-      const priceUnit = (item.price_unit || (listingType === 'short_stay' ? 'per_night' : 'total')) as 'per_night' | 'total';
-
-      const desc = item.description || '';
-      let resolvedCurrency: 'NGN' | 'USD' = 'NGN';
-      if (item.currency === 'USD' || item.display_currency === 'USD') {
-        resolvedCurrency = 'USD';
-      } else if (desc.includes('[CURRENCY:USD]')) {
-        resolvedCurrency = 'USD';
-      } else if (desc.includes('[CURRENCY:NGN]')) {
-        resolvedCurrency = 'NGN';
-      } else if (item.price_usd && Number(item.price_usd) > 0) {
-        // Explicit USD price entered without NGN tag
-        resolvedCurrency = 'USD';
-      }
-      const cleanDescription = desc.replace(/\[CURRENCY:(USD|NGN)\]/g, '').trim();
-
-      return {
-        id: item.id ? String(item.id) : (item.slug || Math.random().toString()),
-        title: item.title || 'Untitled Property',
-        slug: item.slug || (item.title ? item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'property'),
-        type: (item.property_type || (listingType === 'short_stay' ? 'short_stay' : 'apartment')) as PropertyType,
-        listing_type: listingType,
-        price_unit: priceUnit,
-        currency: resolvedCurrency,
-        display_currency: resolvedCurrency,
-        category: (listingType === 'short_stay' ? 'short_stay' : (item.category || 'luxury_apartment')) as any,
-        purpose: listingType === 'short_stay' ? 'Vacation & Short Stay' : (item.purpose || 'Investment'),
-        location: parsedLocation,
-        location_name: resolvedLocationName,
-        priceNgn: item.price ?? item.price_ngn ?? item.priceNgn ?? 0,
-        priceUsd: item.price_usd !== null && item.price_usd !== undefined ? Number(item.price_usd) : (item.priceUsd ? Number(item.priceUsd) : undefined),
-        sizeSqm: item.size_sqm ?? item.sizeSqm ?? item.size,
-        plotsCount: item.plots_count ?? item.plotsCount ?? item.plots ?? 1,
-        bedrooms: item.bedrooms,
-        bathrooms: item.bathrooms,
-        titleStatus: item.title_status ?? item.titleStatus ?? (listingType === 'short_stay' ? 'Short Stay Verified License' : 'Certificate of Occupancy (C of O)'),
-        titleVerified: item.title_verified ?? item.titleVerified ?? true,
-        verificationDocNo: item.verification_doc_no ?? item.verificationDocNo ?? 'LEGIT/VERIFIED/2026',
-        developerInfo: typeof item.developer_info === 'string' ? JSON.parse(item.developer_info) : (item.developerInfo || { name: 'Legit Verified Direct Owner', trackRecord: '10+ Years', verifiedStatus: 'CAC Verified' }),
-        featured: item.featured ?? false,
-        images: gallery,
-        property_image: mainImg,
-        gallery_images: gallery,
-        description: cleanDescription || '',
-        features: Array.isArray(item.features) ? item.features : ['24/7 Power', 'High Speed Wi-Fi', 'Security & Access Control', 'Dedicated Chef / Concierge'],
-        amenities: Array.isArray(item.amenities) ? item.amenities : ['Air Conditioning', 'Swimming Pool', 'Smart TV & Streaming', 'Fully Equipped Kitchen'],
-        nearbyLandmarks: Array.isArray(item.nearby_landmarks) ? item.nearby_landmarks : (item.nearbyLandmarks || ['Close to Premium Lounges', 'Airport Access Corridor']),
-        paymentPlan: typeof item.payment_plan === 'string' ? JSON.parse(item.payment_plan) : (item.paymentPlan || { available: true, minDownpaymentPercent: 20, maxTenorMonths: 12 }),
-        completionDate: item.completion_date ?? item.completionDate,
-        virtualTourUrl: item.property_video || item.virtual_tour_url || item.virtualTourUrl,
-        property_video: item.property_video || item.virtual_tour_url || item.virtualTourUrl,
-        property_availability: (item.property_availability === 'sold' ? 'sold' : 'available') as 'available' | 'sold',
-        dateAdded: item.date_added ?? item.created_at ?? item.dateAdded ?? new Date().toISOString().split('T')[0],
-        verificationNotes: item.verification_notes ?? item.verificationNotes ?? '100% Certified Title & Hospitality License Clearance',
-        whatsappNumber: item.whatsapp_number,
-        callNumber: item.call_number,
-        property_type: item.property_type || item.type
-      };
-    });
+    return data.map((item) => mapSupabaseRowToProperty(item));
   } catch (err) {
     console.error('Error fetching properties from Supabase:', err);
     return [];
   }
 }
+
+/**
+ * Maps a raw Supabase database row to the structured Property interface.
+ */
+export function mapSupabaseRowToProperty(item: any): Property {
+  const rawMain = item.property_image || (Array.isArray(item.gallery_images) && item.gallery_images[0]) || (Array.isArray(item.images) && item.images[0]) || DEFAULT_PROPERTY_IMAGE;
+  const mainImg = normalizeImageUrl(rawMain) || DEFAULT_PROPERTY_IMAGE;
+
+  const rawGallery = Array.isArray(item.gallery_images) && item.gallery_images.length > 0
+    ? item.gallery_images
+    : (Array.isArray(item.images) && item.images.length > 0 ? item.images : [mainImg]);
+
+  const cleanedGallery = rawGallery
+    .map((img: string) => normalizeImageUrl(img))
+    .filter((img: string) => Boolean(img) && img.length > 5);
+
+  const gallery = cleanedGallery.length > 0 ? cleanedGallery : [mainImg];
+
+  const resolvedLocationName = resolveAdminLocation({
+    location: item.location,
+    title: item.title,
+    description: item.description
+  });
+
+  let parsedLocation: Property['location'];
+  if (typeof item.location === 'object' && item.location !== null) {
+    parsedLocation = {
+      address: item.location.address || resolvedLocationName,
+      neighborhood: resolvedLocationName,
+      city: 'Lagos',
+      state: 'Lagos State'
+    };
+  } else if (typeof item.location === 'string') {
+    const rawLoc = item.location.trim();
+    parsedLocation = {
+      address: rawLoc || resolvedLocationName,
+      neighborhood: resolvedLocationName,
+      city: 'Lagos',
+      state: 'Lagos State'
+    };
+  } else {
+    parsedLocation = { address: resolvedLocationName, neighborhood: resolvedLocationName, city: 'Lagos', state: 'Lagos State' };
+  }
+
+  const isShortStay = 
+    item.listing_type === 'short_stay' || 
+    item.property_type === 'short_stay' || 
+    (typeof item.description === 'string' && (item.description.toLowerCase().includes('short stay') || item.description.toLowerCase().includes('shortlet') || item.description.toLowerCase().includes('airbnb'))) ||
+    (typeof item.title === 'string' && (item.title.toLowerCase().includes('short stay') || item.title.toLowerCase().includes('shortlet')));
+
+  const listingType = (isShortStay ? 'short_stay' : (item.listing_type || 'for_sale')) as 'short_stay' | 'for_sale';
+  const priceUnit = (item.price_unit || (listingType === 'short_stay' ? 'per_night' : 'total')) as 'per_night' | 'total';
+
+  const desc = item.description || '';
+  let resolvedCurrency: 'NGN' | 'USD' = 'NGN';
+  if (item.currency === 'USD' || item.display_currency === 'USD') {
+    resolvedCurrency = 'USD';
+  } else if (desc.includes('[CURRENCY:USD]')) {
+    resolvedCurrency = 'USD';
+  } else if (desc.includes('[CURRENCY:NGN]')) {
+    resolvedCurrency = 'NGN';
+  } else if (item.price_usd && Number(item.price_usd) > 0) {
+    // Explicit USD price entered without NGN tag
+    resolvedCurrency = 'USD';
+  }
+  const cleanDescription = desc.replace(/\[CURRENCY:(USD|NGN)\]/g, '').trim();
+
+  return {
+    id: item.id ? String(item.id) : (item.slug || Math.random().toString()),
+    title: item.title || 'Untitled Property',
+    slug: item.slug || (item.title ? item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : 'property'),
+    type: (item.property_type || (listingType === 'short_stay' ? 'short_stay' : 'apartment')) as PropertyType,
+    listing_type: listingType,
+    price_unit: priceUnit,
+    currency: resolvedCurrency,
+    display_currency: resolvedCurrency,
+    category: (listingType === 'short_stay' ? 'short_stay' : (item.category || 'luxury_apartment')) as any,
+    purpose: listingType === 'short_stay' ? 'Vacation & Short Stay' : (item.purpose || 'Investment'),
+    location: parsedLocation,
+    location_name: resolvedLocationName,
+    priceNgn: item.price ?? item.price_ngn ?? item.priceNgn ?? 0,
+    priceUsd: item.price_usd !== null && item.price_usd !== undefined ? Number(item.price_usd) : (item.priceUsd ? Number(item.priceUsd) : undefined),
+    sizeSqm: item.size_sqm ?? item.sizeSqm ?? item.size,
+    plotsCount: item.plots_count ?? item.plotsCount ?? item.plots ?? 1,
+    bedrooms: item.bedrooms,
+    bathrooms: item.bathrooms,
+    titleStatus: item.title_status ?? item.titleStatus ?? (listingType === 'short_stay' ? 'Short Stay Verified License' : 'Certificate of Occupancy (C of O)'),
+    titleVerified: item.title_verified ?? item.titleVerified ?? true,
+    verificationDocNo: item.verification_doc_no ?? item.verificationDocNo ?? 'LEGIT/VERIFIED/2026',
+    developerInfo: typeof item.developer_info === 'string' ? JSON.parse(item.developer_info) : (item.developerInfo || { name: 'Legit Verified Direct Owner', trackRecord: '10+ Years', verifiedStatus: 'CAC Verified' }),
+    featured: item.featured ?? false,
+    images: gallery,
+    property_image: mainImg,
+    gallery_images: gallery,
+    description: cleanDescription || '',
+    features: Array.isArray(item.features) ? item.features : ['24/7 Power', 'High Speed Wi-Fi', 'Security & Access Control', 'Dedicated Chef / Concierge'],
+    amenities: Array.isArray(item.amenities) ? item.amenities : ['Air Conditioning', 'Swimming Pool', 'Smart TV & Streaming', 'Fully Equipped Kitchen'],
+    nearbyLandmarks: Array.isArray(item.nearby_landmarks) ? item.nearby_landmarks : (item.nearbyLandmarks || ['Close to Premium Lounges', 'Airport Access Corridor']),
+    paymentPlan: typeof item.payment_plan === 'string' ? JSON.parse(item.payment_plan) : (item.paymentPlan || { available: true, minDownpaymentPercent: 20, maxTenorMonths: 12 }),
+    completionDate: item.completion_date ?? item.completionDate,
+    virtualTourUrl: item.property_video || item.virtual_tour_url || item.virtualTourUrl,
+    property_video: item.property_video || item.virtual_tour_url || item.virtualTourUrl,
+    property_availability: (item.property_availability === 'sold' ? 'sold' : 'available') as 'available' | 'sold',
+    dateAdded: item.date_added ?? item.created_at ?? item.dateAdded ?? new Date().toISOString().split('T')[0],
+    verificationNotes: item.verification_notes ?? item.verificationNotes ?? '100% Certified Title & Hospitality License Clearance',
+    whatsappNumber: item.whatsapp_number,
+    callNumber: item.call_number,
+    property_type: item.property_type || item.type
+  };
+}
+
+/**
+ * Fetch a single property directly by its unique slug or ID from Supabase.
+ * Fast deep-link resolution without needing to wait for full catalog download.
+ */
+export async function fetchPropertyByIdOrSlug(idOrSlug: string): Promise<Property | null> {
+  if (!supabase || !idOrSlug) return null;
+
+  const cleanTarget = decodeURIComponent(idOrSlug).trim();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanTarget);
+
+  try {
+    // 1. If UUID, query by id
+    if (isUuid) {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('id', cleanTarget)
+        .maybeSingle();
+
+      if (!error && data) {
+        return mapSupabaseRowToProperty(data);
+      }
+    }
+
+    // 2. Query by exact slug
+    const { data: slugData, error: slugErr } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('slug', cleanTarget)
+      .maybeSingle();
+
+    if (!slugErr && slugData) {
+      return mapSupabaseRowToProperty(slugData);
+    }
+
+    // 3. Fallback: try by partial slug / title match
+    const titleHyphenNormalized = cleanTarget.replace(/-/g, ' ');
+    const { data: titleData } = await supabase
+      .from('properties')
+      .select('*')
+      .ilike('title', `%${titleHyphenNormalized}%`)
+      .limit(1);
+
+    if (titleData && titleData.length > 0) {
+      return mapSupabaseRowToProperty(titleData[0]);
+    }
+
+    return null;
+  } catch (err) {
+    console.warn('Error fetching property by ID/slug from Supabase:', err);
+    return null;
+  }
+}
+
 
 /**
  * Helper to get active Supabase Auth session and user before database operations.

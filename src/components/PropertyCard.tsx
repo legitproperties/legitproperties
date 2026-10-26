@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Property, CurrencyCode } from '../types';
-import { ShieldCheck, MapPin, Bookmark, Bed, Bath, Maximize2, MessageCircle, Phone, ArrowUpRight, Flame, Calendar } from 'lucide-react';
+import { ShieldCheck, MapPin, Bookmark, Bed, Bath, Maximize2, MessageCircle, Phone, ArrowUpRight, Flame, Calendar, Link2, Check } from 'lucide-react';
 import { formatPropertyPrice } from '../utils/formatters';
 import { normalizeImageUrl, handleImageError, DEFAULT_PROPERTY_IMAGE } from '../lib/imageUtils';
+import { getPropertyUrl, copyPropertyLinkToClipboard } from '../utils/propertyUrl';
 
 interface PropertyCardProps {
   property: Property;
@@ -21,6 +22,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   onSelectProperty,
   onOpenBooking
 }) => {
+  const [copiedLink, setCopiedLink] = useState(false);
+
   const isShortStay =
     property.listing_type === 'short_stay' ||
     property.price_unit === 'per_night' ||
@@ -28,61 +31,97 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
   const priceUnitLabel = isShortStay ? ' / night' : '';
   const priceInfo = formatPropertyPrice(property, priceUnitLabel);
+  const propertyUrl = getPropertyUrl(property);
   const thumbnailSrc = normalizeImageUrl(property.images?.[0] || property.property_image) || DEFAULT_PROPERTY_IMAGE;
   const imageCount = property.images?.length || (property.gallery_images?.length || 1);
   const cleanWhatsapp = (property.whatsappNumber || '+2348030000000').replace(/[^0-9]/g, '');
   const cleanCall = property.callNumber || property.whatsappNumber || '+2348030000000';
   const whatsappUrl = `https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent(
-    `Hello Legit Properties! I am inquiring about: ${property.title} in ${property.location.neighborhood || property.location.city} (${priceInfo.formatted}). Is it available?`
+    `Hello Legit Properties! I am inquiring about: ${property.title} in ${property.location.neighborhood || property.location.city} (${priceInfo.formatted}). Direct Link: ${propertyUrl}. Is it available?`
   )}`;
+
+  const handleCopyLink = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const success = await copyPropertyLinkToClipboard(property);
+    if (success) {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
+  };
 
   return (
     <div className="group relative bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-xl hover:border-slate-300 transition-all duration-300 flex flex-col h-full w-[310px] sm:w-[350px] flex-shrink-0">
       
       {/* Image Thumbnail Container */}
-      <div className="relative aspect-[4/3] bg-slate-100 overflow-hidden cursor-pointer" onClick={() => onSelectProperty(property)}>
-        <img
-          src={thumbnailSrc}
-          alt={property.title}
-          referrerPolicy="no-referrer"
-          onError={(e) => handleImageError(e, 0)}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-        />
-        
-        {/* Dark overlay gradient for text legibility */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
+      <div className="relative aspect-[4/3] bg-slate-100 overflow-hidden">
+        <a
+          href={propertyUrl}
+          onClick={(e) => {
+            e.preventDefault();
+            onSelectProperty(property);
+          }}
+          className="block w-full h-full cursor-pointer"
+        >
+          <img
+            src={thumbnailSrc}
+            alt={property.title}
+            referrerPolicy="no-referrer"
+            onError={(e) => handleImageError(e, 0)}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+          />
+          {/* Dark overlay gradient for text legibility */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
+        </a>
 
         {/* Title Status Verification Badge */}
-        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/90 backdrop-blur-md text-white text-[11px] font-bold border border-white/20 shadow-md">
+        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/90 backdrop-blur-md text-white text-[11px] font-bold border border-white/20 shadow-md pointer-events-none">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
           <span>{property.titleStatus}</span>
         </div>
 
         {/* Sold Badge */}
         {property.property_availability === 'sold' && (
-          <div className="absolute top-11 left-3 px-2.5 py-0.5 rounded-full bg-red-600/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider shadow-md">
+          <div className="absolute top-11 left-3 px-2.5 py-0.5 rounded-full bg-red-600/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider shadow-md pointer-events-none">
             Sold Out
           </div>
         )}
 
-        {/* Bookmark Action */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleSave(property.id);
-          }}
-          className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-md transition-all shadow-md cursor-pointer ${
-            isSaved
-              ? 'bg-slate-900 text-white'
-              : 'bg-black/40 text-white hover:bg-slate-900 hover:text-white border border-white/20'
-          }`}
-          title={isSaved ? 'Remove from Saved' : 'Save Property'}
-        >
-          <Bookmark className="w-4 h-4 fill-current" />
-        </button>
+        {/* Action buttons (Copy Link + Bookmark) */}
+        <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className={`p-2 rounded-full backdrop-blur-md transition-all shadow-md cursor-pointer ${
+              copiedLink
+                ? 'bg-emerald-600 text-white'
+                : 'bg-black/40 text-white hover:bg-slate-900 hover:text-white border border-white/20'
+            }`}
+            title={copiedLink ? 'Direct Link Copied!' : 'Copy Unique Property Link'}
+          >
+            {copiedLink ? <Check className="w-3.5 h-3.5 text-white" /> : <Link2 className="w-3.5 h-3.5" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onToggleSave(property.id);
+            }}
+            className={`p-2 rounded-full backdrop-blur-md transition-all shadow-md cursor-pointer ${
+              isSaved
+                ? 'bg-slate-900 text-white'
+                : 'bg-black/40 text-white hover:bg-slate-900 hover:text-white border border-white/20'
+            }`}
+            title={isSaved ? 'Remove from Saved' : 'Save Property'}
+          >
+            <Bookmark className="w-3.5 h-3.5 fill-current" />
+          </button>
+        </div>
 
         {/* Property Category Tag & Location */}
-        <div className="absolute bottom-3 left-3 flex items-center gap-1.5">
+        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 pointer-events-none">
           <span className="text-white text-[10px] uppercase font-black tracking-wider bg-slate-900/90 px-2.5 py-0.5 rounded-md backdrop-blur-xs shadow-xs">
             {isShortStay ? 'Short Stay' : property.type === 'land' ? 'Verified Land' : 'For Sale'}
           </span>
@@ -94,7 +133,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         </div>
 
         {/* Image count indicator if multiple */}
-        <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+        <div className="absolute bottom-3 right-3 flex items-center gap-1.5 pointer-events-none">
           {(property.property_video || property.virtualTourUrl) && (
             <div className="text-white text-[10px] font-bold bg-red-600/90 border border-white/10 px-2 py-0.5 rounded-md backdrop-blur-xs">
               Video
@@ -119,11 +158,17 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           </div>
 
           {/* Title Heading */}
-          <h3
-            onClick={() => onSelectProperty(property)}
-            className="text-sm sm:text-base font-extrabold text-slate-900 line-clamp-2 cursor-pointer hover:text-slate-700 transition-colors leading-snug"
-          >
-            {property.title}
+          <h3 className="text-sm sm:text-base font-extrabold text-slate-900 line-clamp-2 leading-snug">
+            <a
+              href={propertyUrl}
+              onClick={(e) => {
+                e.preventDefault();
+                onSelectProperty(property);
+              }}
+              className="hover:text-emerald-700 transition-colors"
+            >
+              {property.title}
+            </a>
           </h3>
         </div>
 

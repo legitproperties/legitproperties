@@ -14,11 +14,14 @@ import {
   CheckCircle2,
   ArrowRight,
   Filter,
-  Loader2
+  Loader2,
+  Link2,
+  Check
 } from 'lucide-react';
 import { Property, SupportedCity, ListingType } from '../../types';
 import { fetchPropertiesFromSupabase } from '../../lib/supabase';
 import { formatPropertyPrice } from '../../utils/formatters';
+import { getPropertyUrl, copyPropertyLinkToClipboard } from '../../utils/propertyUrl';
 import propertyForSaleHeroImg from '../../assets/images/PROPERTY 1.jpeg';
 import shortStayHeroImg from '../../assets/images/hero_luxury_interior_1790768220829.jpg';
 
@@ -70,6 +73,7 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
   const listingsRef = useRef<HTMLDivElement>(null);
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'featured' | 'price_low' | 'price_high'>('featured');
+  const [copiedPropertyId, setCopiedPropertyId] = useState<string | null>(null);
 
   // Determine metadata
   const meta: LocationMeta = useMemo(() => {
@@ -405,11 +409,23 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
 
               const priceUnitLabel = isShortStay ? ' / night' : '';
               const priceInfo = formatPropertyPrice(property, priceUnitLabel);
+              const propertyUrl = getPropertyUrl(property);
+              const isCopied = copiedPropertyId === property.id;
               const cleanWhatsapp = (property.whatsappNumber || '+2348030000000').replace(/[^0-9]/g, '');
               const cleanCall = property.callNumber || property.whatsappNumber || '+2348030000000';
               const messageText = encodeURIComponent(
-                `Hello Legit Properties, I am inquiring about: ${property.title} in ${property.location.neighborhood || property.location.city} (${priceInfo.formatted}). Is it available?`
+                `Hello Legit Properties, I am inquiring about: ${property.title} in ${property.location.neighborhood || property.location.city} (${priceInfo.formatted}). Direct Link: ${propertyUrl}. Is it available?`
               );
+
+              const handleCopyLink = async (e: React.MouseEvent) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const success = await copyPropertyLinkToClipboard(property);
+                if (success) {
+                  setCopiedPropertyId(property.id);
+                  setTimeout(() => setCopiedPropertyId(null), 2000);
+                }
+              };
 
               return (
                 <div
@@ -418,16 +434,25 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
                 >
                   <div>
                     {/* Property Image Container */}
-                    <div className="relative aspect-[16/10] bg-slate-100 overflow-hidden cursor-pointer" onClick={() => onSelectProperty(property)}>
-                      <img
-                        src={property.images[0] || property.property_image}
-                        alt={property.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        referrerPolicy="no-referrer"
-                      />
+                    <div className="relative aspect-[16/10] bg-slate-100 overflow-hidden">
+                      <a
+                        href={propertyUrl}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onSelectProperty(property);
+                        }}
+                        className="block w-full h-full cursor-pointer"
+                      >
+                        <img
+                          src={property.images[0] || property.property_image}
+                          alt={property.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          referrerPolicy="no-referrer"
+                        />
+                      </a>
 
                       {/* Top Badges */}
-                      <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap">
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap pointer-events-none">
                         <span className="px-2.5 py-1 rounded-full bg-slate-900/90 backdrop-blur-md text-white text-[11px] font-bold">
                           {property.location.city}
                         </span>
@@ -442,8 +467,22 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
                         )}
                       </div>
 
+                      {/* Top Right: Copy Direct Link Button */}
+                      <button
+                        type="button"
+                        onClick={handleCopyLink}
+                        className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-md transition-all shadow-md cursor-pointer z-10 ${
+                          isCopied
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-black/40 text-white hover:bg-slate-900 hover:text-white border border-white/20'
+                        }`}
+                        title={isCopied ? 'Link Copied!' : 'Copy Unique Property Link'}
+                      >
+                        {isCopied ? <Check className="w-3.5 h-3.5" /> : <Link2 className="w-3.5 h-3.5" />}
+                      </button>
+
                       {/* Media counter */}
-                      <div className="absolute bottom-3 right-3 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-xs text-white text-[10px] font-semibold">
+                      <div className="absolute bottom-3 right-3 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-xs text-white text-[10px] font-semibold pointer-events-none">
                         {property.images.length} Photos
                       </div>
                     </div>
@@ -455,11 +494,17 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
                           <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span className="truncate">{property.location.neighborhood}, {property.location.city}</span>
                         </div>
-                        <h3
-                          onClick={() => onSelectProperty(property)}
-                          className="font-bold text-base sm:text-lg text-slate-900 line-clamp-1 mt-1 hover:text-emerald-700 transition-colors cursor-pointer"
-                        >
-                          {property.title}
+                        <h3 className="font-bold text-base sm:text-lg text-slate-900 line-clamp-1 mt-1 leading-snug">
+                          <a
+                            href={propertyUrl}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              onSelectProperty(property);
+                            }}
+                            className="hover:text-emerald-700 transition-colors"
+                          >
+                            {property.title}
+                          </a>
                         </h3>
                       </div>
 

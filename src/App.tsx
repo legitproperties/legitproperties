@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Property, SupportedCity, ListingType, CurrencyCode, BookingRequest } from './types';
-import { fetchPropertiesFromSupabase } from './lib/supabase';
+import { fetchPropertiesFromSupabase, fetchPropertyByIdOrSlug } from './lib/supabase';
+import { parsePropertyIdentifierFromUrl, getPropertyUrl } from './utils/propertyUrl';
+import { trackMetaPixelEvent } from './utils/metaPixel';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
 import { AdminAuthPage } from './components/admin/AdminAuthPage';
 import { AdminDashboard } from './components/admin/AdminDashboard';
@@ -59,9 +61,9 @@ function AdminRouteView({ onNavigate }: { onNavigate: (path: string) => void }) 
   );
 }
 
-function parseAppRoute(): { isAdmin: boolean; category: ListingType; city: SupportedCity } {
+function parseAppRoute(): { isAdmin: boolean; category: ListingType; city: SupportedCity; propertyIdentifier: string | null } {
   if (typeof window === 'undefined') {
-    return { isAdmin: false, category: 'short_stay', city: 'Lagos' };
+    return { isAdmin: false, category: 'short_stay', city: 'Lagos', propertyIdentifier: null };
   }
 
   const path = (window.location.pathname + window.location.hash + window.location.search).toLowerCase();
@@ -73,14 +75,16 @@ function parseAppRoute(): { isAdmin: boolean; category: ListingType; city: Suppo
     path.includes('admin=true');
 
   if (isAdmin) {
-    return { isAdmin: true, category: 'short_stay', city: 'Lagos' };
+    return { isAdmin: true, category: 'short_stay', city: 'Lagos', propertyIdentifier: null };
   }
+
+  const propertyIdentifier = parsePropertyIdentifierFromUrl();
 
   if (path.includes('for-sale') || path.includes('for_sale') || path.includes('properties-for-sale')) {
-    return { isAdmin: false, category: 'for_sale', city: 'Lagos' };
+    return { isAdmin: false, category: 'for_sale', city: 'Lagos', propertyIdentifier };
   }
 
-  return { isAdmin: false, category: 'short_stay', city: 'Lagos' };
+  return { isAdmin: false, category: 'short_stay', city: 'Lagos', propertyIdentifier };
 }
 
 function MainApp() {
@@ -90,24 +94,123 @@ function MainApp() {
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [currency] = useState<CurrencyCode>('NGN');
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [isLoadingDirectProperty, setIsLoadingDirectProperty] = useState<boolean>(() => Boolean(parsePropertyIdentifierFromUrl()));
 
-  // Load properties live from Supabase (Strict zero mock data)
+  // Direct selection handler that updates browser URL to unique property link
+  const handleSelectProperty = (prop: Property, replaceHistory = false) => {
+    setSelectedProperty(prop);
+    if (prop.listing_type) {
+      setCurrentCategory(prop.listing_type);
+    }
+    const propertyUrl = getPropertyUrl(prop);
+    if (typeof window !== 'undefined') {
+      if (replaceHistory) {
+        window.history.replaceState({ propertyId: prop.id }, '', propertyUrl);
+      } else {
+        window.history.pushState({ propertyId: prop.id }, '', propertyUrl);
+      }
+    }
+    document.title = `${prop.title} | Legit Properties`;
+    trackMetaPixelEvent('ViewContent', {
+      content_name: prop.title,
+      content_ids: [prop.id],
+      content_type: 'product',
+      value: prop.priceNgn,
+      currency: prop.currency || 'NGN'
+    });
+  };
+
+  const handleClosePropertyModal = () => {
+    setSelectedProperty(null);
+    if (typeof window !== 'undefined') {
+      const currentPropInUrl = parsePropertyIdentifierFromUrl();
+      if (currentPropInUrl) {
+        const fallbackUrl = currentCategory === 'short_stay' ? '/' : '#/properties-for-sale';
+        window.history.pushState(null, '', fallbackUrl);
+      }
+    }
+  };
+
+  // 1. Initial direct link resolution on mount
+  useEffect(() => {
+    const propIdentifier = parsePropertyIdentifierFromUrl();
+    if (!propIdentifier) {
+      setIsLoadingDirectProperty(false);
+      return;
+    }
+
+    let isMounted = true;
+    (async () => {
+      setIsLoadingDirectProperty(true);
+      const direct = await fetchPropertyByIdOrSlug(propIdentifier);
+      if (isMounted && direct) {
+        handleSelectProperty(direct, true);
+      }
+      if (isMounted) {
+        setIsLoadingDirectProperty(false);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // 2. Load properties live from Supabase (Strict zero mock data)
   useEffect(() => {
     async function loadProperties() {
       const data = await fetchPropertiesFromSupabase();
       setProperties(data || []);
+
+      // If user came via unique property link and not resolved yet, match from catalog
+      const propIdentifier = parsePropertyIdentifierFromUrl();
+      if (propIdentifier && data && data.length > 0) {
+        const found = data.find(
+          (p) =>
+            p.slug === propIdentifier ||
+            p.id === propIdentifier ||
+            p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') === propIdentifier
+        );
+        if (found) {
+          handleSelectProperty(found, true);
+        }
+      }
     }
     loadProperties();
   }, []);
 
-  // Sync route on popstate and hashchange
+  // 3. Sync route and property selection on popstate and hashchange
   useEffect(() => {
-    const handleUrlChange = () => {
+    const handleUrlChange = async () => {
       const route = parseAppRoute();
       setRouteState(route);
       if (!route.isAdmin) {
         setCurrentCategory(route.category);
         setCurrentCity(route.city);
+      }
+
+      const propIdentifier = parsePropertyIdentifierFromUrl();
+      if (!propIdentifier) {
+        setSelectedProperty(null);
+      } else {
+        const found = properties.find(
+          (p) =>
+            p.slug === propIdentifier ||
+            p.id === propIdentifier ||
+            p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') === propIdentifier
+        );
+        if (found) {
+          handleSelectProperty(found, true);
+        } else {
+          setIsLoadingDirectProperty(true);
+          const direct = await fetchPropertyByIdOrSlug(propIdentifier);
+          if (direct) {
+            handleSelectProperty(direct, true);
+            setProperties((prev) => (prev.some((p) => p.id === direct.id) ? prev : [direct, ...prev]));
+          }
+          setIsLoadingDirectProperty(false);
+        }
       }
     };
 
@@ -117,7 +220,7 @@ function MainApp() {
       window.removeEventListener('popstate', handleUrlChange);
       window.removeEventListener('hashchange', handleUrlChange);
     };
-  }, []);
+  }, [properties]);
 
   // Update Document SEO metadata & Schema.org on location/category change
   useEffect(() => {
@@ -227,7 +330,6 @@ function MainApp() {
   }, [properties, savedIds]);
 
   // Modals state
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [bookingProperty, setBookingProperty] = useState<Property | null>(null);
 
   const [isSavedDrawerOpen, setIsSavedDrawerOpen] = useState(false);
@@ -270,7 +372,7 @@ function MainApp() {
           currentCategory={currentCategory}
           currentCity={currentCity}
           properties={properties}
-          onSelectProperty={(prop) => setSelectedProperty(prop)}
+          onSelectProperty={handleSelectProperty}
           onOpenBookingModal={(prop) => setBookingProperty(prop)}
           onNavigateCity={handleNavigateCity}
         />
@@ -278,6 +380,16 @@ function MainApp() {
         {/* Trust Signals Section */}
         <TrustBar onOpenTitleCheck={() => setIsTitleCheckOpen(true)} />
       </main>
+
+      {/* Direct Property Loading Overlay when navigating directly via URL */}
+      {isLoadingDirectProperty && !selectedProperty && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-slate-900 text-white rounded-3xl p-6 border border-slate-800 shadow-2xl flex items-center gap-3">
+            <Loader2 className="w-5 h-5 text-emerald-400 animate-spin" />
+            <span className="text-sm font-semibold">Opening verified property...</span>
+          </div>
+        </div>
+      )}
 
       {/* 3. Footer */}
       <Footer
@@ -300,7 +412,7 @@ function MainApp() {
       <PropertyDetailModal
         property={selectedProperty}
         isOpen={Boolean(selectedProperty)}
-        onClose={() => setSelectedProperty(null)}
+        onClose={handleClosePropertyModal}
         currency={currency}
         isSaved={selectedProperty ? savedIds.includes(selectedProperty.id) : false}
         onToggleSave={handleToggleSave}
@@ -317,7 +429,7 @@ function MainApp() {
           setSavedIds([]);
           localStorage.removeItem('legit_saved_properties');
         }}
-        onSelectProperty={(p) => setSelectedProperty(p)}
+        onSelectProperty={handleSelectProperty}
       />
 
       <PropertyFilterModal

@@ -29,10 +29,12 @@ import {
   MapPin,
   Sparkles,
   Calendar,
-  Loader2
+  Loader2,
+  Link2
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { Property, BlogPost, PropertyRequestLead, BookingRequest, ADMIN_LOCATION_OPTIONS } from '../../types';
+import { getPropertyUrl, copyPropertyLinkToClipboard } from '../../utils/propertyUrl';
 import {
   supabase,
   fetchPropertiesFromSupabase,
@@ -95,6 +97,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoToPublicSite
 
   // SQL Copy feedback
   const [copiedSql, setCopiedSql] = useState(false);
+  const [copiedPropertyLinkId, setCopiedPropertyLinkId] = useState<string | null>(null);
 
   const loadAllData = async () => {
     setIsLoadingData(true);
@@ -788,6 +791,23 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
                             <td className="py-3 text-right">
                               <div className="flex items-center justify-end gap-1.5">
                                 <button
+                                  onClick={async () => {
+                                    const success = await copyPropertyLinkToClipboard(prop);
+                                    if (success) {
+                                      setCopiedPropertyLinkId(prop.id);
+                                      setTimeout(() => setCopiedPropertyLinkId(null), 2000);
+                                    }
+                                  }}
+                                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                    copiedPropertyLinkId === prop.id
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white'
+                                  }`}
+                                  title={copiedPropertyLinkId === prop.id ? 'Public Link Copied!' : 'Copy Unique Public Link'}
+                                >
+                                  {copiedPropertyLinkId === prop.id ? <Check className="w-3.5 h-3.5" /> : <Link2 className="w-3.5 h-3.5" />}
+                                </button>
+                                <button
                                   onClick={() => {
                                     setPropertyToEdit(prop);
                                     setIsPropertyModalOpen(true);
@@ -935,6 +955,23 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
                             {prop.sizeSqm ? `${prop.sizeSqm} sqm` : prop.bedrooms ? `${prop.bedrooms} Beds` : 'Verified Plot'}
                           </span>
                           <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={async () => {
+                                const success = await copyPropertyLinkToClipboard(prop);
+                                if (success) {
+                                  setCopiedPropertyLinkId(prop.id);
+                                  setTimeout(() => setCopiedPropertyLinkId(null), 2000);
+                                }
+                              }}
+                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                copiedPropertyLinkId === prop.id
+                                  ? 'bg-emerald-600 text-white'
+                                  : 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white'
+                              }`}
+                              title={copiedPropertyLinkId === prop.id ? 'Public Link Copied!' : 'Copy Unique Public Link'}
+                            >
+                              {copiedPropertyLinkId === prop.id ? <Check className="w-3.5 h-3.5" /> : <Link2 className="w-3.5 h-3.5" />}
+                            </button>
                             <button
                               onClick={() => {
                                 setPropertyToEdit(prop);

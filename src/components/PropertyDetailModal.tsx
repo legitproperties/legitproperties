@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Property, CurrencyCode } from '../types';
 import { formatCurrency, createWhatsAppInquiryUrl, formatPropertyPrice } from '../utils/formatters';
+import { getPropertyUrl, copyPropertyLinkToClipboard } from '../utils/propertyUrl';
 import {
   X,
   ShieldCheck,
@@ -18,6 +19,9 @@ import {
   Video,
   ChevronLeft,
   ChevronRight,
+  Link2,
+  Copy,
+  ExternalLink,
   Image as ImageIcon
 } from 'lucide-react';
 import { getValidPropertyImages, handleImageError } from '../lib/imageUtils';
@@ -62,12 +66,18 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
   const priceUnitLabel = isShortStay ? ' / night' : '';
   const priceInfo = formatPropertyPrice(property, priceUnitLabel);
   const priceFormatted = formatCurrency(property.priceNgn, currency);
-  const whatsappUrl = createWhatsAppInquiryUrl(property.title, property.id, priceInfo.formatted);
+  
+  const propertyUrl = getPropertyUrl(property);
+  const cleanWhatsapp = (property.whatsappNumber || '+2348030000000').replace(/[^0-9]/g, '');
+  const directInquiryText = `Hello Legit Properties! I am inquiring about: ${property.title} in ${property.location.neighborhood || property.location.city} (${priceInfo.formatted}).\n\nDirect Link: ${propertyUrl}\n\nIs it available?`;
+  const whatsappUrl = `https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent(directInquiryText)}`;
 
-  const handleCopyShareLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+  const handleCopyShareLink = async () => {
+    const success = await copyPropertyLinkToClipboard(property);
+    if (success) {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
   };
 
   return (
@@ -252,6 +262,43 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                 <MessageCircle className="w-4 h-4 text-white" />
                 <span>Inquire Title & Documents</span>
               </a>
+            </div>
+          </div>
+
+          {/* Unique Direct Property Link Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-900 text-white shadow-sm border border-slate-800">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                <Link2 className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] uppercase font-extrabold text-emerald-400 tracking-wider">
+                  Direct Property Link
+                </div>
+                <div className="text-xs text-slate-300 font-mono truncate select-all">
+                  {propertyUrl}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleCopyShareLink}
+                className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+              >
+                {copiedLink ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy Unique Link</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
 

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Property, CurrencyCode } from '../types';
 import { formatCompactPrice, formatCurrency, formatPropertyPrice } from '../utils/formatters';
-import { X, Trash2, MessageCircle, ShieldCheck } from 'lucide-react';
+import { getPropertyUrl, copyPropertyLinkToClipboard } from '../utils/propertyUrl';
+import { X, Trash2, MessageCircle, ShieldCheck, Link2, Check } from 'lucide-react';
 
 interface SavedDrawerProps {
   isOpen: boolean;
@@ -22,12 +23,14 @@ export const SavedDrawer: React.FC<SavedDrawerProps> = ({
   onClearAll,
   onSelectProperty,
 }) => {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
   if (!isOpen) return null;
 
   const totalValueNgn = savedProperties.reduce((sum, p) => sum + p.priceNgn, 0);
 
-  const bulkWhatsappMessage = `Hello legitproperties! I have saved ${savedProperties.length} verified properties on your website and would like a combined title verification report & site inspection schedule:\n\n` +
-    savedProperties.map((p, idx) => `${idx + 1}. ${p.title} (${formatCompactPrice(p.priceNgn, currency)})`).join('\n') +
+  const bulkWhatsappMessage = `Hello Legit Properties! I have saved ${savedProperties.length} verified properties on your website and would like a combined title verification report & site inspection schedule:\n\n` +
+    savedProperties.map((p, idx) => `${idx + 1}. ${p.title} (${formatCompactPrice(p.priceNgn, currency)})\n   Link: ${getPropertyUrl(p)}`).join('\n\n') +
     `\n\nTotal Portfolio Value: ${formatCurrency(totalValueNgn, currency)}`;
 
   const bulkWhatsappUrl = `https://wa.me/2348030001122?text=${encodeURIComponent(bulkWhatsappMessage)}`;
@@ -106,13 +109,31 @@ export const SavedDrawer: React.FC<SavedDrawerProps> = ({
                   </div>
                 </div>
 
-                <button
-                  onClick={() => onRemoveSaved(property.id)}
-                  className="p-2 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
-                  title="Remove"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={async () => {
+                      const success = await copyPropertyLinkToClipboard(property);
+                      if (success) {
+                        setCopiedId(property.id);
+                        setTimeout(() => setCopiedId(null), 2000);
+                      }
+                    }}
+                    className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                      copiedId === property.id ? 'text-emerald-600 bg-emerald-50' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200'
+                    }`}
+                    title={copiedId === property.id ? 'Link Copied!' : 'Copy Direct Link'}
+                  >
+                    {copiedId === property.id ? <Check className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+                  </button>
+
+                  <button
+                    onClick={() => onRemoveSaved(property.id)}
+                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                    title="Remove"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))
           )}
