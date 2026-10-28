@@ -126,15 +126,23 @@ function MainApp() {
     if (typeof window !== 'undefined') {
       const currentPropInUrl = parsePropertyIdentifierFromUrl();
       if (currentPropInUrl) {
-        const fallbackUrl = currentCategory === 'short_stay' ? '/' : '#/properties-for-sale';
+        const fallbackUrl = currentCategory === 'short_stay' ? '#/short-stay/lagos' : '#/properties-for-sale';
         window.history.pushState(null, '', fallbackUrl);
       }
     }
   };
 
-  // 1. Initial direct link resolution on mount
+  // 1. Initial direct link resolution on mount & path-to-hash normalization
   useEffect(() => {
     const propIdentifier = parsePropertyIdentifierFromUrl();
+
+    // If loaded via server-side path /property/:slug, normalize URL to /#/property/:slug
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/property/')) {
+      if (propIdentifier) {
+        window.history.replaceState(null, '', `/#/property/${encodeURIComponent(propIdentifier)}`);
+      }
+    }
+
     if (!propIdentifier) {
       setIsLoadingDirectProperty(false);
       return;
