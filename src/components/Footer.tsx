@@ -8,6 +8,7 @@ interface FooterProps {
   onOpenContact: () => void;
   onOpenFaq: () => void;
   onScrollToTop: () => void;
+  onOpenBlogs?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
@@ -17,6 +18,7 @@ export const Footer: React.FC<FooterProps> = ({
   onOpenContact,
   onOpenFaq,
   onScrollToTop,
+  onOpenBlogs,
 }) => {
   return (
     <footer className="bg-slate-900 text-slate-300 pt-14 pb-8 border-t border-slate-800 text-xs">
@@ -83,6 +85,21 @@ export const Footer: React.FC<FooterProps> = ({
                 <button onClick={onOpenLegalGuide} className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer">
                   <BookOpen className="w-3.5 h-3.5 text-slate-400" />
                   <span>Title Audit & Legal Policy</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    if (onOpenBlogs) {
+                      onOpenBlogs();
+                    } else if (typeof window !== 'undefined') {
+                      window.location.hash = '#/blogs';
+                    }
+                  }}
+                  className="hover:text-emerald-400 transition-colors flex items-center gap-1.5 cursor-pointer text-slate-300 font-semibold"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Real Estate Journal & Blogs</span>
                 </button>
               </li>
               <li>

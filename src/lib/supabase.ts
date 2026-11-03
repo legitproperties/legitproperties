@@ -763,9 +763,11 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
       property
     );
 
-    const rawMain = Array.isArray(property.images) && property.images.length > 0
-      ? property.images[0]
-      : (property.property_image || DEFAULT_PROPERTY_IMAGE);
+    // Priority image resolution: explicit property_image, then gallery_images[0], then images[0]
+    const rawMain = property.property_image || 
+      (Array.isArray(property.gallery_images) && property.gallery_images.length > 0 ? property.gallery_images[0] : null) ||
+      (Array.isArray(property.images) && property.images.length > 0 ? property.images[0] : null) || 
+      DEFAULT_PROPERTY_IMAGE;
     const mainImage = normalizeImageUrl(rawMain) || DEFAULT_PROPERTY_IMAGE;
 
     const rawGallery = Array.isArray(property.gallery_images) && property.gallery_images.length > 0
@@ -776,7 +778,10 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
       .map((img) => normalizeImageUrl(img))
       .filter((img) => Boolean(img) && img.length > 5);
 
-    const galleryImages = cleanedGallery.length > 0 ? cleanedGallery : [mainImage];
+    // Ensure mainImage is present in gallery_images
+    const galleryImages = cleanedGallery.length > 0 
+      ? (cleanedGallery.includes(mainImage) ? cleanedGallery : [mainImage, ...cleanedGallery])
+      : [mainImage];
 
     const listingType = property.listing_type || (property.property_type === 'short_stay' ? 'short_stay' : 'for_sale');
     const priceUnit = property.price_unit || (listingType === 'short_stay' ? 'per_night' : 'total');
@@ -788,7 +793,8 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
     const rawAvailability = property.property_availability || (property as any).availability || 'available';
     const propertyAvailability = rawAvailability === 'sold' ? 'sold' : 'available';
 
-    // Base verified database payload matching confirmed table schema (including price in Naira & price_usd in Dollars):
+    // Base verified database payload matching confirmed table schema:
+    // Schema columns: id, title, description, price, price_usd, location, property_type, whatsapp_number, call_number, property_image, gallery_images, property_video, property_availability, created_at, updated_at
     const basePayload: Record<string, any> = {
       title: safeTitle,
       description: safeDescription,
@@ -800,7 +806,6 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
       call_number: callNum,
       property_image: mainImage,
       gallery_images: galleryImages,
-      images: galleryImages,
       property_video: propertyVideo,
       property_availability: propertyAvailability
     };

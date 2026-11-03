@@ -1039,6 +1039,16 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
                     />
                   </div>
 
+                  <a
+                    href="/blogs"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md cursor-pointer shrink-0"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>View Live /blogs</span>
+                  </a>
+
                   <button
                     onClick={() => {
                       setBlogToEdit(null);
@@ -1079,6 +1089,16 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                        <a
+                          href={`/blogs#${post.slug || post.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 rounded-xl bg-slate-700/80 hover:bg-slate-700 text-emerald-400 text-xs font-semibold cursor-pointer flex items-center gap-1"
+                          title="View on /blogs"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View</span>
+                        </a>
                         <button
                           onClick={() => {
                             setBlogToEdit(post);

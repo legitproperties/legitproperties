@@ -33,6 +33,7 @@ interface NavbarProps {
   onOpenFaq: () => void;
   onNavigateCity?: (city: SupportedCity | 'all', category: 'short_stay' | 'for_sale') => void;
   onOpenAdmin?: () => void;
+  onOpenBlogs?: () => void;
 }
 
 const NIGERIAN_CITIES: { id: SupportedCity; label: string; state: string }[] = [
@@ -52,6 +53,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenFaq,
   onNavigateCity,
   onOpenAdmin,
+  onOpenBlogs,
 }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -124,8 +126,23 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             </a>
 
-            {/* Right Side: Single Clean Hamburger Menu Icon */}
+            {/* Right Side: Blog Link + Single Clean Hamburger Menu Icon */}
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenBlogs) {
+                    onOpenBlogs();
+                  } else {
+                    window.location.hash = '#/blogs';
+                  }
+                }}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:text-slate-950 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-slate-500" />
+                <span>Blog & Insights</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(true)}
@@ -230,6 +247,35 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <div>
                           <div className="text-xs font-bold text-slate-900">Properties for Sale in Lagos</div>
                           <div className="text-[11px] text-slate-600">Lands with C of O & Luxury Mansions</div>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+                  </div>
+
+                  {/* Field Guides & Real Estate Blog */}
+                  <div className="pt-2 border-t border-slate-100">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-3">
+                      Field Guides & Research
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsDrawerOpen(false);
+                        if (onOpenBlogs) {
+                          onOpenBlogs();
+                        } else {
+                          window.location.hash = '#/blogs';
+                        }
+                      }}
+                      className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 transition-all text-left cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                          <BookOpen className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-slate-900">Real Estate Journal & Blogs</div>
+                          <div className="text-[11px] text-slate-600">C of O Audits, Yields & Legal Guides</div>
                         </div>
                       </div>
                       <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />

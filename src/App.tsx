@@ -21,6 +21,7 @@ import { AboutModal } from './components/AboutModal';
 import { LegalGuideModal } from './components/LegalGuideModal';
 import { ContactModal } from './components/ContactModal';
 import { FaqModal } from './components/FaqModal';
+import { BlogsPage } from './components/public/BlogsPage';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 
 /**
@@ -61,9 +62,17 @@ function AdminRouteView({ onNavigate }: { onNavigate: (path: string) => void }) 
   );
 }
 
-function parseAppRoute(): { isAdmin: boolean; category: ListingType; city: SupportedCity; propertyIdentifier: string | null } {
+export interface AppRouteState {
+  isAdmin: boolean;
+  isBlogs: boolean;
+  category: ListingType;
+  city: SupportedCity;
+  propertyIdentifier: string | null;
+}
+
+function parseAppRoute(): AppRouteState {
   if (typeof window === 'undefined') {
-    return { isAdmin: false, category: 'short_stay', city: 'Lagos', propertyIdentifier: null };
+    return { isAdmin: false, isBlogs: false, category: 'short_stay', city: 'Lagos', propertyIdentifier: null };
   }
 
   const path = (window.location.pathname + window.location.hash + window.location.search).toLowerCase();
@@ -75,16 +84,32 @@ function parseAppRoute(): { isAdmin: boolean; category: ListingType; city: Suppo
     path.includes('admin=true');
 
   if (isAdmin) {
-    return { isAdmin: true, category: 'short_stay', city: 'Lagos', propertyIdentifier: null };
+    return { isAdmin: true, isBlogs: false, category: 'short_stay', city: 'Lagos', propertyIdentifier: null };
+  }
+
+  // Check if routed to blogs page: /blogs, #/blogs, #blogs, /blog, #/blog, or page=blogs
+  const isBlogs =
+    window.location.pathname.startsWith('/blogs') ||
+    window.location.pathname.startsWith('/blog') ||
+    path.includes('#/blogs') ||
+    path.includes('#/blog') ||
+    path.includes('#blogs') ||
+    path.includes('#blog') ||
+    path.includes('page=blogs') ||
+    path.includes('route=blogs') ||
+    path.includes('tab=blog');
+
+  if (isBlogs) {
+    return { isAdmin: false, isBlogs: true, category: 'short_stay', city: 'Lagos', propertyIdentifier: null };
   }
 
   const propertyIdentifier = parsePropertyIdentifierFromUrl();
 
   if (path.includes('for-sale') || path.includes('for_sale') || path.includes('properties-for-sale')) {
-    return { isAdmin: false, category: 'for_sale', city: 'Lagos', propertyIdentifier };
+    return { isAdmin: false, isBlogs: false, category: 'for_sale', city: 'Lagos', propertyIdentifier };
   }
 
-  return { isAdmin: false, category: 'short_stay', city: 'Lagos', propertyIdentifier };
+  return { isAdmin: false, isBlogs: false, category: 'short_stay', city: 'Lagos', propertyIdentifier };
 }
 
 function MainApp() {
@@ -193,9 +218,14 @@ function MainApp() {
     const handleUrlChange = async () => {
       const route = parseAppRoute();
       setRouteState(route);
-      if (!route.isAdmin) {
+      if (!route.isAdmin && !route.isBlogs) {
         setCurrentCategory(route.category);
         setCurrentCity(route.city);
+      }
+
+      if (route.isBlogs) {
+        setSelectedProperty(null);
+        return;
       }
 
       const propIdentifier = parsePropertyIdentifierFromUrl();
@@ -234,6 +264,18 @@ function MainApp() {
   useEffect(() => {
     if (routeState.isAdmin) {
       document.title = 'Administrator Portal | Legit Properties';
+      return;
+    }
+
+    if (routeState.isBlogs) {
+      document.title = 'Real Estate & Short Stay Insights | Legit Properties';
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) {
+        metaDesc.setAttribute(
+          'content',
+          'Read verified legal guides on Lagos land titles, Certificate of Occupancy verification at Alausa, high-yield short-stay hosting, and diaspora property acquisition.'
+        );
+      }
       return;
     }
 
@@ -281,20 +323,25 @@ function MainApp() {
     };
 
     scriptTag.textContent = JSON.stringify(schemaData);
-  }, [routeState.isAdmin, currentCategory]);
+  }, [routeState.isAdmin, routeState.isBlogs, currentCategory]);
 
   // Navigate function
   const navigateTo = (path: string) => {
     if (typeof window !== 'undefined') {
       if (path.startsWith('/admin')) {
         window.history.pushState(null, '', '#/admin');
-        setRouteState({ isAdmin: true, category: currentCategory, city: 'Lagos' });
+        setRouteState({ isAdmin: true, isBlogs: false, category: currentCategory, city: 'Lagos', propertyIdentifier: null });
+      } else if (path === '/blogs' || path.startsWith('/blogs') || path === '#/blogs' || path.includes('blogs')) {
+        window.history.pushState(null, '', '/blogs');
+        setRouteState({ isAdmin: false, isBlogs: true, category: currentCategory, city: 'Lagos', propertyIdentifier: null });
       } else {
         window.history.pushState(null, '', path);
         const parsed = parseAppRoute();
         setRouteState(parsed);
-        setCurrentCategory(parsed.category);
-        setCurrentCity('Lagos');
+        if (!parsed.isBlogs) {
+          setCurrentCategory(parsed.category);
+          setCurrentCity('Lagos');
+        }
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -303,6 +350,7 @@ function MainApp() {
   const handleNavigateCity = (city: SupportedCity | 'all', category: 'short_stay' | 'for_sale') => {
     setCurrentCity('Lagos');
     setCurrentCategory(category);
+    setRouteState((prev) => ({ ...prev, isBlogs: false, category, city: 'Lagos', propertyIdentifier: null }));
 
     const newHash = category === 'short_stay' 
       ? '#/short-stay/lagos' 
@@ -372,21 +420,33 @@ function MainApp() {
         onOpenFaq={() => setIsFaqOpen(true)}
         onNavigateCity={handleNavigateCity}
         onOpenAdmin={() => navigateTo('/admin')}
+        onOpenBlogs={() => navigateTo('/blogs')}
       />
 
-      {/* 2. Public-Facing Localized Landing Page (SEO & Conversion Optimized) */}
+      {/* 2. Public-Facing Content: Blogs Page or Localized Landing Page */}
       <main className="flex-1">
-        <LocalizedLandingPage
-          currentCategory={currentCategory}
-          currentCity={currentCity}
-          properties={properties}
-          onSelectProperty={handleSelectProperty}
-          onOpenBookingModal={(prop) => setBookingProperty(prop)}
-          onNavigateCity={handleNavigateCity}
-        />
+        {routeState.isBlogs ? (
+          <BlogsPage
+            onNavigateHome={() => navigateTo('/')}
+            onSelectProperty={handleSelectProperty}
+            onOpenPropertiesForSale={() => handleNavigateCity('Lagos', 'for_sale')}
+            onOpenShortStays={() => handleNavigateCity('Lagos', 'short_stay')}
+          />
+        ) : (
+          <>
+            <LocalizedLandingPage
+              currentCategory={currentCategory}
+              currentCity={currentCity}
+              properties={properties}
+              onSelectProperty={handleSelectProperty}
+              onOpenBookingModal={(prop) => setBookingProperty(prop)}
+              onNavigateCity={handleNavigateCity}
+            />
 
-        {/* Trust Signals Section */}
-        <TrustBar onOpenTitleCheck={() => setIsTitleCheckOpen(true)} />
+            {/* Trust Signals Section */}
+            <TrustBar onOpenTitleCheck={() => setIsTitleCheckOpen(true)} />
+          </>
+        )}
       </main>
 
       {/* Direct Property Loading Overlay when navigating directly via URL */}
@@ -407,6 +467,7 @@ function MainApp() {
         onOpenContact={() => setIsContactOpen(true)}
         onOpenFaq={() => setIsFaqOpen(true)}
         onScrollToTop={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        onOpenBlogs={() => navigateTo('/blogs')}
       />
 
       {/* 4. Instant Booking Modal for Short Stays & Direct Purchase Inquiries */}
