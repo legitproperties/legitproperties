@@ -75,7 +75,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       id: 'book-' + Date.now(),
       propertyId: property.id,
       propertyTitle: property.title,
-      propertyLocation: `${property.location.neighborhood || ''}, ${property.location.city}`,
+      propertyLocation: property.location?.address || `${property.location.neighborhood || ''}, ${property.location.city}`,
       guestName: guestName.trim(),
       email: email.trim(),
       phone: phone.trim(),
@@ -108,7 +108,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const whatsAppText = encodeURIComponent(
     `Hello Legit Properties! I just submitted an Instant Reservation Request:\n\n` +
     `• Property: ${property.title}\n` +
-    `• Location: ${property.location.city}\n` +
+    `• Location: ${property.location?.address || `${property.location.neighborhood || ''}, ${property.location.city}`}\n` +
     `• Guest Name: ${guestName}\n` +
     `• Phone: ${phone}\n` +
     `• Check-In: ${checkIn}\n` +
@@ -215,7 +215,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 />
                 <div className="flex-1 min-w-0">
                   <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">{property.title}</h4>
-                  <p className="text-[11px] text-slate-500 truncate">{property.location.neighborhood}, {property.location.city}</p>
+                  <p className="text-[11px] text-slate-500 truncate">{property.location?.address || `${property.location.neighborhood}, ${property.location.city}`}</p>
                   <div className="text-xs font-extrabold text-slate-900 mt-1 flex items-center gap-1.5 font-mono">
                     <span>{currencySymbol}{pricePerNight.toLocaleString()}{isShortStay ? ' / night' : ' total'}</span>
                     <span className="text-[10px] text-slate-400 font-sans uppercase">({isUsd ? 'USD' : 'NGN'})</span>

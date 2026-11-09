@@ -944,9 +944,13 @@ CREATE POLICY "Admins can view and update bookings" ON public.bookings FOR ALL U
                       <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                         <div>
                           <h4 className="font-bold text-white text-sm line-clamp-1">{prop.title}</h4>
-                          <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
-                            <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                            <span>{prop.location?.neighborhood || prop.location_name || 'Ajah'}, Lagos</span>
+                          <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-1">
+                            <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            <span className="truncate text-slate-300" title={prop.location?.address || `${prop.location?.neighborhood || 'Ajah'}, Lagos`}>
+                              {prop.location?.address && prop.location.address !== prop.location.neighborhood
+                                ? prop.location.address
+                                : `${prop.location?.neighborhood || prop.location_name || 'Ajah'}, Lagos`}
+                            </span>
                           </p>
                         </div>
 

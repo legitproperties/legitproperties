@@ -223,9 +223,9 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
           {/* Core Info Banner */}
           <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-1 text-slate-500 text-xs font-semibold">
-                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span>
+              <div className="flex items-center gap-1.5 text-slate-700 text-xs sm:text-sm font-semibold">
+                <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="font-bold text-slate-900">
                   {property.location?.address && property.location.address !== property.location.neighborhood
                     ? property.location.address
                     : `${property.location?.neighborhood || (property as any).location_name || 'Ajah'}, Lagos`}
@@ -373,9 +373,15 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                     <span className="font-bold uppercase text-slate-900">{property.type}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-200/60">
-                    <span className="text-slate-500 font-medium">Location</span>
-                    <span className="font-bold text-slate-900">{property.location.city}</span>
+                    <span className="text-slate-500 font-medium">Corridor / Area</span>
+                    <span className="font-bold text-slate-900">{property.location?.neighborhood || (property as any).location_name || 'Lagos'}</span>
                   </div>
+                  {property.location?.address && (
+                    <div className="flex justify-between py-1 border-b border-slate-200/60 items-start gap-2">
+                      <span className="text-slate-500 font-medium shrink-0">Address</span>
+                      <span className="font-bold text-slate-900 text-right max-w-[200px] break-words">{property.location.address}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between py-1 border-b border-slate-200/60">
                     <span className="text-slate-500 font-medium">Title Document</span>
                     <span className="font-bold text-slate-900">{property.titleStatus}</span>

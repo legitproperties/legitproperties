@@ -69,11 +69,27 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   const [selectedLocation, setSelectedLocation] = useState<AdminLocationOption>(() => {
     return resolveAdminLocation(propertyToEdit);
   });
-  const [specificAddress, setSpecificAddress] = useState<string>(
-    propertyToEdit?.location?.address && propertyToEdit.location.address !== propertyToEdit.location.neighborhood
-      ? propertyToEdit.location.address
-      : ''
-  );
+  const [specificAddress, setSpecificAddress] = useState<string>(() => {
+    if (!propertyToEdit) return '';
+    const raw = (
+      propertyToEdit.location?.address ||
+      (typeof (propertyToEdit as any).location === 'string' ? (propertyToEdit as any).location : '')
+    ).trim();
+
+    if (!raw) return '';
+    const loc = resolveAdminLocation(propertyToEdit);
+    if (raw.toLowerCase() === loc.toLowerCase() || raw.toLowerCase() === `${loc.toLowerCase()}, lagos`) {
+      return '';
+    }
+
+    // Strip trailing ", Lagos" or ", Lagos State" and corridor if present at the end
+    let cleaned = raw;
+    cleaned = cleaned.replace(/,\s*Lagos(\s+State)?$/i, '').trim();
+    const locRegex = new RegExp(`,\\s*${loc.replace(/([()])/g, '\\$1')}$`, 'i');
+    cleaned = cleaned.replace(locRegex, '').trim();
+
+    return cleaned || raw;
+  });
 
   // 4. Price & Specs (Dual-Currency: Naira ₦ & Dollar $)
   const initialNgn = propertyToEdit?.priceNgn || (listingType === 'short_stay' ? 150000 : 75000000);
@@ -318,7 +334,18 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
       category: listingType === 'short_stay' ? 'short_stay' : 'luxury_apartment',
       purpose: listingType === 'short_stay' ? 'Vacation & Short Stay' : 'Investment',
       location: {
-        address: specificAddress.trim() ? `${specificAddress.trim()}, ${selectedLocation}, Lagos` : `${selectedLocation}, Lagos`,
+        address: (() => {
+          const cleanSpecific = specificAddress.trim();
+          if (!cleanSpecific) return `${selectedLocation}, Lagos`;
+          let addr = cleanSpecific;
+          if (!addr.toLowerCase().includes(selectedLocation.toLowerCase())) {
+            addr = `${addr}, ${selectedLocation}`;
+          }
+          if (!addr.toLowerCase().includes('lagos')) {
+            addr = `${addr}, Lagos`;
+          }
+          return addr;
+        })(),
         neighborhood: selectedLocation,
         city: 'Lagos',
         state: 'Lagos State'

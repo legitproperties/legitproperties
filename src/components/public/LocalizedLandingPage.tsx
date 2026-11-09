@@ -490,9 +490,16 @@ export const LocalizedLandingPage: React.FC<LocalizedLandingPageProps> = ({
                     {/* Property Info */}
                     <div className="p-5 space-y-3">
                       <div>
-                        <div className="flex items-center gap-1 text-[11px] text-slate-500">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate">{property.location.neighborhood}, {property.location.city}</span>
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                          <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span
+                            className="truncate text-slate-700"
+                            title={property.location?.address || `${property.location.neighborhood}, ${property.location.city}`}
+                          >
+                            {property.location?.address && property.location.address !== property.location.neighborhood
+                              ? property.location.address
+                              : `${property.location.neighborhood || (property as any).location_name || 'Ajah'}, ${property.location.city || 'Lagos'}`}
+                          </span>
                         </div>
                         <h3 className="font-bold text-base sm:text-lg text-slate-900 line-clamp-1 mt-1 leading-snug">
                           <a

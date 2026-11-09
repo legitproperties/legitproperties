@@ -104,6 +104,9 @@ export const SavedDrawer: React.FC<SavedDrawerProps> = ({
                   >
                     {property.title}
                   </h4>
+                  <div className="text-[10px] text-slate-500 truncate">
+                    {property.location?.address || `${property.location?.neighborhood || 'Ajah'}, Lagos`}
+                  </div>
                   <div className="text-xs font-black text-slate-900 mt-0.5">
                     {formatPropertyPrice(property).formatted}
                   </div>

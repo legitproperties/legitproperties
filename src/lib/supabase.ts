@@ -755,13 +755,34 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
       .trim();
     const safeDescription = `${cleanDesc} [CURRENCY:${selectedCurrency}]`;
 
-    // Exact clean location string saved directly to the Supabase 'location' column (Awoyaya, Ajah, Royal Garden Estate, etc.):
-    const locationString = resolveAdminLocation(
+    // Preserve full specific address if provided by user/admin, while ensuring the corridor/neighborhood is included
+    const locProp: any = property.location;
+    const rawAddress = 
+      (typeof locProp === 'object' && locProp?.address ? String(locProp.address).trim() : '') ||
+      (typeof locProp === 'string' ? locProp.trim() : '') ||
+      (typeof (property as any).address === 'string' ? String((property as any).address).trim() : '') ||
+      '';
+
+    const resolvedCorridor = resolveAdminLocation(
       (property as any).location_name ||
       (property as any).locationName ||
       property.location ||
       property
     );
+
+    let locationString: string;
+    if (rawAddress && rawAddress.toLowerCase() !== resolvedCorridor.toLowerCase()) {
+      let formatted = rawAddress;
+      if (!formatted.toLowerCase().includes(resolvedCorridor.toLowerCase())) {
+        formatted = `${formatted}, ${resolvedCorridor}`;
+      }
+      if (!formatted.toLowerCase().includes('lagos')) {
+        formatted = `${formatted}, Lagos`;
+      }
+      locationString = formatted;
+    } else {
+      locationString = `${resolvedCorridor}, Lagos`;
+    }
 
     // Priority image resolution: explicit property_image, then gallery_images[0], then images[0]
     const rawMain = property.property_image || 

@@ -152,9 +152,16 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         
         <div className="space-y-2">
           {/* Location Line */}
-          <div className="flex items-center gap-1 text-slate-500 text-xs font-semibold">
-            <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-            <span className="truncate">{property.location?.neighborhood || (property as any).location_name || 'Ajah'}, Lagos</span>
+          <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold">
+            <MapPin className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+            <span
+              className="truncate text-slate-700"
+              title={property.location?.address || `${property.location?.neighborhood || 'Ajah'}, Lagos`}
+            >
+              {property.location?.address && property.location.address !== property.location.neighborhood
+                ? property.location.address
+                : `${property.location?.neighborhood || (property as any).location_name || 'Ajah'}, Lagos`}
+            </span>
           </div>
 
           {/* Title Heading */}
