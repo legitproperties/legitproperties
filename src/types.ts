@@ -98,6 +98,7 @@ export interface Property {
   property_type?: string;
   property_video?: string;
   property_availability?: 'available' | 'sold';
+  specific_address?: string;
 }
 
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';

@@ -502,36 +502,13 @@ export function mapSupabaseRowToProperty(item: any): Property {
     description: item.description
   });
 
-  let parsedLocation: Property['location'];
-  if (typeof item.location === 'object' && item.location !== null) {
-    parsedLocation = {
-      address: item.location.address || resolvedLocationName,
-      neighborhood: resolvedLocationName,
-      city: 'Lagos',
-      state: 'Lagos State'
-    };
-  } else if (typeof item.location === 'string') {
-    const rawLoc = item.location.trim();
-    parsedLocation = {
-      address: rawLoc || resolvedLocationName,
-      neighborhood: resolvedLocationName,
-      city: 'Lagos',
-      state: 'Lagos State'
-    };
-  } else {
-    parsedLocation = { address: resolvedLocationName, neighborhood: resolvedLocationName, city: 'Lagos', state: 'Lagos State' };
+  const desc = item.description || '';
+  let specificStreet: string | null = null;
+  const addressMatch = desc.match(/\[ADDRESS:(.*?)\]/);
+  if (addressMatch && addressMatch[1] && addressMatch[1].trim()) {
+    specificStreet = addressMatch[1].trim();
   }
 
-  const isShortStay = 
-    item.listing_type === 'short_stay' || 
-    item.property_type === 'short_stay' || 
-    (typeof item.description === 'string' && (item.description.toLowerCase().includes('short stay') || item.description.toLowerCase().includes('shortlet') || item.description.toLowerCase().includes('airbnb'))) ||
-    (typeof item.title === 'string' && (item.title.toLowerCase().includes('short stay') || item.title.toLowerCase().includes('shortlet')));
-
-  const listingType = (isShortStay ? 'short_stay' : (item.listing_type || 'for_sale')) as 'short_stay' | 'for_sale';
-  const priceUnit = (item.price_unit || (listingType === 'short_stay' ? 'per_night' : 'total')) as 'per_night' | 'total';
-
-  const desc = item.description || '';
   let resolvedCurrency: 'NGN' | 'USD' = 'NGN';
   if (item.currency === 'USD' || item.display_currency === 'USD') {
     resolvedCurrency = 'USD';
@@ -543,7 +520,37 @@ export function mapSupabaseRowToProperty(item: any): Property {
     // Explicit USD price entered without NGN tag
     resolvedCurrency = 'USD';
   }
-  const cleanDescription = desc.replace(/\[CURRENCY:(USD|NGN)\]/g, '').trim();
+  const cleanDescription = desc
+    .replace(/\[CURRENCY:(USD|NGN)\]/g, '')
+    .replace(/\[ADDRESS:.*?\]/g, '')
+    .trim();
+
+  let fullAddress = `${resolvedLocationName}, Lagos`;
+  if (specificStreet) {
+    if (specificStreet.toLowerCase().includes(resolvedLocationName.toLowerCase())) {
+      fullAddress = specificStreet.toLowerCase().includes('lagos') ? specificStreet : `${specificStreet}, Lagos`;
+    } else {
+      fullAddress = `${specificStreet}, ${resolvedLocationName}, Lagos`;
+    }
+  } else if (typeof item.location === 'string' && item.location.trim().length > 0 && item.location.trim() !== resolvedLocationName) {
+    fullAddress = item.location.trim();
+  }
+
+  const parsedLocation: Property['location'] = {
+    address: fullAddress,
+    neighborhood: resolvedLocationName,
+    city: 'Lagos',
+    state: 'Lagos State'
+  };
+
+  const isShortStay = 
+    item.listing_type === 'short_stay' || 
+    item.property_type === 'short_stay' || 
+    (typeof item.description === 'string' && (item.description.toLowerCase().includes('short stay') || item.description.toLowerCase().includes('shortlet') || item.description.toLowerCase().includes('airbnb'))) ||
+    (typeof item.title === 'string' && (item.title.toLowerCase().includes('short stay') || item.title.toLowerCase().includes('shortlet')));
+
+  const listingType = (isShortStay ? 'short_stay' : (item.listing_type || 'for_sale')) as 'short_stay' | 'for_sale';
+  const priceUnit = (item.price_unit || (listingType === 'short_stay' ? 'per_night' : 'total')) as 'per_night' | 'total';
 
   return {
     id: item.id ? String(item.id) : (item.slug || Math.random().toString()),
@@ -585,7 +592,8 @@ export function mapSupabaseRowToProperty(item: any): Property {
     verificationNotes: item.verification_notes ?? item.verificationNotes ?? '100% Certified Title & Hospitality License Clearance',
     whatsappNumber: item.whatsapp_number,
     callNumber: item.call_number,
-    property_type: item.property_type || item.type
+    property_type: item.property_type || item.type,
+    specific_address: specificStreet || undefined
   };
 }
 
@@ -751,38 +759,43 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
     const safeTitle = (property.title || '').trim();
     const selectedCurrency = property.currency || property.display_currency || 'NGN';
     const cleanDesc = (property.description?.trim() || 'Verified real estate property with clean title clearance.')
-      .replace(/\[CURRENCY:(USD|NGN)\]/g, '')
+      .replace(/\[CURRENCY:(USD|NGN)\]/gi, '')
+      .replace(/\[ADDRESS:[^\]]+\]/gi, '')
       .trim();
-    const safeDescription = `${cleanDesc} [CURRENCY:${selectedCurrency}]`;
 
-    // Preserve full specific address if provided by user/admin, while ensuring the corridor/neighborhood is included
-    const locProp: any = property.location;
-    const rawAddress = 
-      (typeof locProp === 'object' && locProp?.address ? String(locProp.address).trim() : '') ||
-      (typeof locProp === 'string' ? locProp.trim() : '') ||
-      (typeof (property as any).address === 'string' ? String((property as any).address).trim() : '') ||
-      '';
-
-    const resolvedCorridor = resolveAdminLocation(
+    // 1. Strictly resolve location to a valid admin corridor to satisfy Postgres CHECK constraint 'properties_location_check'
+    const resolvedCorridor: AdminLocationOption = resolveAdminLocation(
       (property as any).location_name ||
       (property as any).locationName ||
       property.location ||
       property
     );
 
-    let locationString: string;
-    if (rawAddress && rawAddress.toLowerCase() !== resolvedCorridor.toLowerCase()) {
-      let formatted = rawAddress;
-      if (!formatted.toLowerCase().includes(resolvedCorridor.toLowerCase())) {
-        formatted = `${formatted}, ${resolvedCorridor}`;
+    // 2. Extract specific street address / landmark (if entered) to preserve alongside corridor in description metadata
+    const locProp: any = property.location;
+    const rawAddress = 
+      (typeof (property as any).specific_address === 'string' ? String((property as any).specific_address).trim() : '') ||
+      (typeof locProp === 'object' && locProp?.address ? String(locProp.address).trim() : '') ||
+      (typeof locProp === 'string' ? locProp.trim() : '') ||
+      (typeof (property as any).address === 'string' ? String((property as any).address).trim() : '') ||
+      '';
+
+    let specificStreet = '';
+    if (rawAddress && rawAddress.toLowerCase() !== resolvedCorridor.toLowerCase() && rawAddress.toLowerCase() !== `${resolvedCorridor.toLowerCase()}, lagos`) {
+      let cleaned = rawAddress;
+      cleaned = cleaned.replace(/,\s*Lagos(\s+State)?$/i, '').trim();
+      const locRegex = new RegExp(`,\\s*${resolvedCorridor.replace(/([()])/g, '\\$1')}$`, 'i');
+      cleaned = cleaned.replace(locRegex, '').trim();
+      if (cleaned && cleaned.toLowerCase() !== resolvedCorridor.toLowerCase()) {
+        specificStreet = cleaned;
       }
-      if (!formatted.toLowerCase().includes('lagos')) {
-        formatted = `${formatted}, Lagos`;
-      }
-      locationString = formatted;
-    } else {
-      locationString = `${resolvedCorridor}, Lagos`;
     }
+
+    let safeDescription = cleanDesc;
+    if (specificStreet) {
+      safeDescription += ` [ADDRESS:${specificStreet}]`;
+    }
+    safeDescription += ` [CURRENCY:${selectedCurrency}]`;
 
     // Priority image resolution: explicit property_image, then gallery_images[0], then images[0]
     const rawMain = property.property_image || 
@@ -821,7 +834,7 @@ export async function savePropertyToSupabase(property: Partial<Property>): Promi
       description: safeDescription,
       price: numericPrice,
       price_usd: numericPriceUsd,
-      location: locationString,
+      location: resolvedCorridor,
       property_type: propertyType,
       whatsapp_number: whatsappNum,
       call_number: callNum,

@@ -71,6 +71,9 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
   });
   const [specificAddress, setSpecificAddress] = useState<string>(() => {
     if (!propertyToEdit) return '';
+    if (propertyToEdit.specific_address && propertyToEdit.specific_address.trim()) {
+      return propertyToEdit.specific_address.trim();
+    }
     const raw = (
       propertyToEdit.location?.address ||
       (typeof (propertyToEdit as any).location === 'string' ? (propertyToEdit as any).location : '')
@@ -351,6 +354,7 @@ export const PropertyFormModal: React.FC<PropertyFormModalProps> = ({
         state: 'Lagos State'
       },
       location_name: selectedLocation,
+      specific_address: specificAddress.trim() || undefined,
       priceNgn: Number(priceNgn) || 0,
       priceUsd: (priceUsd !== '' && priceUsd !== null && !isNaN(Number(priceUsd))) 
         ? Number(priceUsd) 
